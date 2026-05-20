@@ -1,0 +1,42 @@
+[
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/ANamelessWorld.Build.cs",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/ANamelessWorld.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/ANamelessWorld.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Attributes/UCPRGAttributeSet.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Attributes/UCRPGAttributeSet.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	}
+]
