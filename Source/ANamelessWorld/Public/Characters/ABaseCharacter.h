@@ -90,6 +90,22 @@ public:
     void InitDefaultAttributes();
 
 
+    // ── UTurnManager Interface ───────────────────────────────────────────────
+    // UTurnManager cannot touch Attributes or bIsDead directly (they are protected).
+    // These two functions are the controlled window UTurnManager uses instead.
+
+    // Returns true if this character is still alive.
+    // UTurnManager calls this in RemoveDeadCombatants() and CheckCombatOver().
+    UFUNCTION(BlueprintCallable, Category = "ANW|State")
+    bool IsAlive() const;
+
+    // Returns the raw Dexterity score (e.g. 14.0).
+    // UTurnManager uses this to calculate the initiative modifier for turn order.
+    // Formula: modifier = floor((Dexterity - 10) / 2)
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetDexterity() const;
+
+
 protected:
 
     // ── GAS Core Components ──────────────────────────────────────────────────

@@ -60,8 +60,8 @@ ABaseCharacter::ABaseCharacter()
 
 
     // ── Inventory ────────────────────────────────────────────────────────────
-    // TODO Session 3: replace with real UInventoryComponent once written.
-    // InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
+    // Session 3 complete — UInventoryComponent now exists, enabling this.
+    InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
 
 
     // ── Dialogue ─────────────────────────────────────────────────────────────
@@ -226,6 +226,36 @@ void ABaseCharacter::Die()
         TEXT("ABaseCharacter::Die() — %s has died."),
         *GetName());
     // *GetName() — dereferences the FString to a raw TCHAR* that %s expects.
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// UTURNMANAGER INTERFACE
+// ════════════════════════════════════════════════════════════════════════════
+
+bool ABaseCharacter::IsAlive() const
+{
+    // bIsDead is flipped to true inside Die() when Health hits 0.
+    // We return the opposite — alive means NOT dead.
+    return !bIsDead;
+}
+
+float ABaseCharacter::GetDexterity() const
+{
+    // Guard: Attributes should always exist after the constructor runs,
+    // but we check defensively to avoid a crash if something went wrong at spawn.
+    if (Attributes == nullptr)
+    {
+        UE_LOG(LogTemp, Warning,
+            TEXT("%s: GetDexterity() called but Attributes is null. Returning 10 (neutral modifier)."),
+            *GetName());
+        return 10.0f;
+        // Score 10 → modifier 0 → no bonus or penalty to initiative.
+    }
+
+    // ATTRIBUTE_ACCESSORS generated GetDexterity() on UCRPGAttributeSet in Session 1.
+    // We call it here so UTurnManager never needs to touch Attributes directly.
+    return Attributes->GetDexterity();
 }
 
 
