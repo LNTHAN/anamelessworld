@@ -14,8 +14,9 @@
 // Provides FGameplayEffectModCallbackData — the struct passed to
 // PostGameplayEffectExecute that tells us which attribute changed and by how much.
 
-#include "GameFramework/Character.h"
-// Provides ACharacter — we cast the owning actor to this to call Die().
+#include "Characters/ABaseCharacter.h"
+// Full include so we can call Die() when Health hits 0.
+// UCRPGAttributeSet.h does not include ABaseCharacter.h, so no circular dependency.
 
 
 // ── Constructor ──────────────────────────────────────────────────────────────
@@ -64,10 +65,10 @@ void UCRPGAttributeSet::PostGameplayEffectExecute(
     // ── Who owns this AttributeSet? ──────────────────────────────────────────
     // The AttributeSet lives on a character. We need a pointer to that character
     // so we can call Die() on it when Health reaches 0.
-    ACharacter* OwningCharacter = Cast<ACharacter>(GetOwningActor());
-    // Cast<> is UE5's safe type conversion.
-    // If GetOwningActor() is not an ACharacter (e.g. a turret), Cast returns nullptr.
-    // We check for nullptr before using the pointer (see below).
+    ABaseCharacter* OwningCharacter = Cast<ABaseCharacter>(GetOwningActor());
+    // Cast<ABaseCharacter> — we need ABaseCharacter specifically (not just ACharacter)
+    // so we can call Die(), which is declared on ABaseCharacter, not ACharacter.
+    // Returns nullptr if the owning actor is not an ABaseCharacter — safe to call.
 
 
     // ── CLAMP AND REACT: Health ───────────────────────────────────────────────
@@ -88,22 +89,13 @@ void UCRPGAttributeSet::PostGameplayEffectExecute(
         // ── Death trigger ────────────────────────────────────────────────────
         if (GetHealth() <= 0.f && OwningCharacter != nullptr)
         // Two conditions:
-        //   GetHealth() <= 0.f  — health actually hit zero
-        //   OwningCharacter != nullptr — we have a valid pointer to call Die() on
-        //
-        // WHY CHECK nullptr? If we skip this and OwningCharacter is nullptr,
-        // calling OwningCharacter->Die() dereferences a null pointer → crash.
+        //   GetHealth() <= 0.f  — health actually hit zero (after clamping)
+        //   OwningCharacter != nullptr — safe pointer to call Die() on
         {
-            // TODO (Session 2): Call OwningCharacter->Die() once ABaseCharacter exists.
-            // For now we log to the Output Log so we can verify the trigger works.
-            UE_LOG(LogTemp, Warning,
-                TEXT("PostGameplayEffectExecute: %s Health reached 0 — Die() will be called here."),
-                *OwningCharacter->GetName());
-            // UE_LOG format:
-            //   LogTemp   — which log category (LogTemp is the generic scratch category)
-            //   Warning   — severity (Log, Warning, Error)
-            //   TEXT("…") — the message string (TEXT() macro handles wide chars)
-            //   *GetName()— dereferences FString to raw TCHAR* that %s expects
+            // Die() sets bIsDead, cancels abilities, and logs the death.
+            // The bIsDead guard inside Die() means calling it twice is safe —
+            // if two effects land on the same frame, only the first call runs.
+            OwningCharacter->Die();
         }
     }
 
