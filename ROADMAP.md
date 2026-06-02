@@ -80,5 +80,26 @@ Goal: Battle ends with a proper cinematic finish
 ## Total
 - Sessions done: 6
 - Sessions remaining: ~19
-- At 1 session/day: **~4 weeks**
-- Realistic (some sessions expand): **5–6 weeks**
+- At 2 sessions/day: **~10 days**
+- Realistic (some sessions expand): **2–3 weeks**
+
+---
+
+## 2-Sessions/Day Calendar
+Target start: 2026-06-03 (Session 7)
+
+| Day | Date | Session A | Session B |
+|---|---|---|---|
+| 1 | Jun 03 | 7 — APlayerCharacter + AEnemyCharacter subclasses, key-bound attack | 8 — Turn order queue, initiative rolls, turn order UI |
+| 2 | Jun 04 | 9 — Enemy AI (auto-select move + target) | 10 — ABossCharacter (higher stats, different moveset) |
+| 3 | Jun 05 | 11 — Data Assets (load stats + abilities per character) | 12 — Multiple abilities (2 per character) |
+| 4 | Jun 06 | 13 — Win/lose detection (all enemies dead / player dead) | 14 — Health bars UMG widget |
+| 5 | Jun 07 | 15 — Turn order indicator UI strip | 16 — Command menu (player picks ability on their turn) |
+| 6 | Jun 08 | 17 — Ability animations (attack / hurt / death, no VFX) | 18 — Dialogue system (text box, name, advance on input) |
+| 7 | Jun 09 | 19 — Pre-battle dialogue trigger | 20 — Post-battle dialogue trigger |
+| 8 | Jun 10 | 21 — Story slideshow (images + text sequence) | 22 — Main menu (Start Game → slideshow) |
+| 9 | Jun 11 | 23 — BGM (1 track, persists through slideshow + battle) | 24 — Chapter complete screen + fade to black |
+| 10 | Jun 12 | 25 — "To Be Continued..." screen | Buffer / polish + bugfix |
+
+**Target completion: ~2026-06-12**
+Buffer week for overscoping: **2026-06-19 hard deadline**
