@@ -1,20 +1,20 @@
 # ANamelessWorld — Session Context
 
 ## Last Session
-**Session 6** — completed 2026-06-02
+**Session 7** — completed 2026-06-04
 
 ## Last Completed Task
-First end-to-end damage test:
-- Created `Config/DefaultGameplayTags.ini` with `Ability.Attack.Basic` tag
-- Created `GE_DamageInstant` Blueprint (Instant, Health Add -101 for one-hit kill test)
-- Created `BP_GA_BasicAttack` Blueprint (trigger tag: Ability.Attack.Basic)
-- Created `BP_BaseCharacter` Blueprint (Default Abilities: BP_GA_BasicAttack)
-- Created `TestLevel` with two BP_BaseCharacter actors (BP_Player, BP_Enemy)
-- Wired Level Blueprint: BeginPlay → Delay 2s → SendGameplayEventToActor
-- Confirmed Output Log: `GA_BasicAttack: attacked` + `ABaseCharacter::Die()` ✓
+APlayerCharacter + AEnemyCharacter subclasses, key-bound attack, UTurnManager turn loop:
+- Created `APlayerCharacter` with Space bar attack binding and `SetupCombat()`
+- Created `AEnemyCharacter` with `ExecuteAITurn()` auto-attack on its turn
+- Created `BP_PlayerCharacter` and `BP_EnemyCharacter` Blueprints
+- Created `GE_DefaultAttributes` to initialize Health=100 on both characters
+- Wired Level Blueprint: Construct TurnManager → AddCombatant × 2 → SetupCombat × 2 → StartCombat
+- Set Auto Possess Player 0 on BP_Player
+- Confirmed turn loop: enemy acts automatically, player acts on Space press ✓
 
 ## Next Task
-**Session 7** — APlayerCharacter + AEnemyCharacter subclasses, key-bound attack, UTurnManager integration
+**Session 8** — Win/lose detection, turn order queue UI strip
 
 ## Session History
 | Session | Topic | Status |
@@ -25,4 +25,5 @@ First end-to-end damage test:
 | 4 | UTurnManager | ✓ Done |
 | 5 | GA_BasicAttack C++ | ✓ Done |
 | 6 | GE_DamageInstant + end-to-end damage test | ✓ Done |
-| 7 | APlayerCharacter, AEnemyCharacter, key binding, UTurnManager wiring | Upcoming |
+| 7 | APlayerCharacter, AEnemyCharacter, key binding, UTurnManager turn loop | ✓ Done |
+| 8 | Win/lose detection, turn order queue UI | Upcoming |

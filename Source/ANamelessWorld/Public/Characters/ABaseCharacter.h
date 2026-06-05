@@ -105,6 +105,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
     float GetDexterity() const;
 
+    // Returns current Health — used by HUD to fill the health bar.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetHealth() const;
+
+    // Returns MaxHealth — used by HUD to calculate Health/MaxHealth ratio.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetMaxHealth() const;
+
 
 protected:
 

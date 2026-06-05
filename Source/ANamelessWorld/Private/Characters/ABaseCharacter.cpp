@@ -240,6 +240,18 @@ bool ABaseCharacter::IsAlive() const
     return !bIsDead;
 }
 
+float ABaseCharacter::GetHealth() const
+{
+    if (Attributes == nullptr) return 0.f;
+    return Attributes->GetHealth();
+}
+
+float ABaseCharacter::GetMaxHealth() const
+{
+    if (Attributes == nullptr) return 1.f;
+    return Attributes->GetMaxHealth();
+}
+
 float ABaseCharacter::GetDexterity() const
 {
     // Guard: Attributes should always exist after the constructor runs,
