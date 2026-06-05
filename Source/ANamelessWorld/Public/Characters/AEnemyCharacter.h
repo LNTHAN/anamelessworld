@@ -34,4 +34,9 @@ public:
     // The player character to attack. Set in the editor.
     UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "ANW|Combat")
     ABaseCharacter* PlayerTarget;
+
+    // 0 = never use heavy strike, 100 = always use heavy strike.
+    // Default 30 = 30% chance per turn. Override per-instance in the editor.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ANW|Combat")
+    int32 HeavyStrikeChance = 30;
 };

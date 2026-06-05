@@ -38,8 +38,20 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
     FGameplayEventData Payload;
     Payload.Target = PlayerTarget;
 
-    FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(
-        FName("Ability.Attack.Basic"));
+    // Pick an ability based on HeavyStrikeChance (0–100).
+    // FMath::RandRange(0, 99) gives a uniform roll — if it falls below
+    // HeavyStrikeChance, the enemy uses the heavy attack instead.
+    const int32 Roll = FMath::RandRange(0, 99);
+    const bool bUseHeavy = (Roll < HeavyStrikeChance);
+
+    FGameplayTag AttackTag = bUseHeavy
+        ? FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Heavy"))
+        : FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Basic"));
+
+    UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s chose %s (roll %d, threshold %d)."),
+        *GetName(),
+        bUseHeavy ? TEXT("Heavy Strike") : TEXT("Basic Attack"),
+        Roll, HeavyStrikeChance);
 
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
         this, AttackTag, Payload);
