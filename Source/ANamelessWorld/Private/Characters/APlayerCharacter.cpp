@@ -13,17 +13,12 @@ APlayerCharacter::APlayerCharacter()
 
 void APlayerCharacter::BeginPlay()
 {
-    // Run ABaseCharacter::BeginPlay() first — it initialises GAS and grants abilities.
     Super::BeginPlay();
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-    // Bind the Space bar to OnAttackPressed.
-    // "Attack" is an Action Mapping we'll register in Project Settings.
-    // IE_Pressed = fire when the key goes DOWN (not held, not released).
     PlayerInputComponent->BindAction(
         "Attack", IE_Pressed, this, &APlayerCharacter::OnAttackPressed);
 }
@@ -34,26 +29,64 @@ void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* 
     CurrentTarget = InTarget;
 }
 
-void APlayerCharacter::OnAttackPressed()
+// ── Shared ability firing logic ───────────────────────────────────────────────
+
+void APlayerCharacter::FireAbility(const FName& TagName)
 {
-    // Guard: only act on the player's turn.
     if (!TurnManager) return;
     if (TurnManager->GetCurrentState() != ETurnState::PlayerTurn) return;
-
-    // Guard: need a living target.
     if (!CurrentTarget || !CurrentTarget->IsAlive()) return;
 
-    // Build the event payload — this is how GA_BasicAttack receives its target.
     FGameplayEventData Payload;
     Payload.Target = CurrentTarget;
 
-    // Fire the gameplay event. This activates BP_GA_BasicAttack via its trigger tag.
-    FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(
-        FName("Ability.Attack.Basic"));
+    FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TagName);
+    UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, Tag, Payload);
 
-    UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-        this, AttackTag, Payload);
-
-    // Tell UTurnManager the player's turn is done.
     TurnManager->EndTurn();
+}
+
+// ── Public ability functions (called by command menu buttons) ─────────────────
+
+void APlayerCharacter::OnAttackPressed()
+{
+    FireAbility(FName("Ability.Attack.Basic"));
+}
+
+void APlayerCharacter::UseBasicAttack()
+{
+    FireAbility(FName("Ability.Attack.Basic"));
+}
+
+void APlayerCharacter::UseHeavyStrike()
+{
+    FireAbility(FName("Ability.Attack.Heavy"));
+}
+
+// ── Target cycling ────────────────────────────────────────────────────────────
+
+void APlayerCharacter::AddTarget(ABaseCharacter* NewTarget)
+{
+    if (NewTarget) AllTargets.Add(NewTarget);
+}
+
+void APlayerCharacter::CycleTarget()
+{
+    if (AllTargets.Num() == 0) return;
+
+    // Find the index of the current target.
+    int32 CurrentIndex = AllTargets.IndexOfByKey(CurrentTarget);
+
+    // Search forward for the next living target, wrapping around.
+    for (int32 i = 1; i <= AllTargets.Num(); i++)
+    {
+        int32 NextIndex = (CurrentIndex + i) % AllTargets.Num();
+        if (AllTargets[NextIndex] && AllTargets[NextIndex]->IsAlive())
+        {
+            CurrentTarget = AllTargets[NextIndex];
+            UE_LOG(LogTemp, Log, TEXT("APlayerCharacter: Target switched to %s."),
+                *CurrentTarget->GetName());
+            return;
+        }
+    }
 }

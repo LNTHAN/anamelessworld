@@ -33,13 +33,34 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget);
 
+    // Called by command menu buttons to fire a specific ability.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void UseBasicAttack();
+
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void UseHeavyStrike();
+
+    // Cycles CurrentTarget to the next living enemy in the combatant list.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void CycleTarget();
+
+    // Adds a single target to the AllTargets array.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void AddTarget(ABaseCharacter* NewTarget);
+
+    // All possible targets — set by Level Blueprint after combat starts.
+    UPROPERTY(BlueprintReadWrite, Category = "ANW|Combat")
+    TArray<ABaseCharacter*> AllTargets;
+
     // Reference to the turn manager — assigned in BeginPlay via the level.
-    // APlayerCharacter calls EndTurn() on this after attacking.
     UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "ANW|Combat")
     UTurnManager* TurnManager;
 
     // The enemy to target when attacking.
-    // Set in the editor per-instance (drag the enemy actor in).
     UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "ANW|Combat")
     ABaseCharacter* CurrentTarget;
+
+private:
+    // Shared logic for firing any attack ability by tag.
+    void FireAbility(const FName& TagName);
 };
