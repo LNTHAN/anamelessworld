@@ -118,78 +118,49 @@ void ABaseCharacter::BeginPlay()
 // ════════════════════════════════════════════════════════════════════════════
 
 void ABaseCharacter::InitDefaultAbilities()
-// Grants every ability in the DefaultAbilities array to the AbilitySystemComponent.
-// Designers add ability classes (e.g. GA_BasicAttack) in the Blueprint Class Defaults.
-// Code does not need to know the specific abilities — it just grants the list.
 {
-    // Guard: only the server grants abilities in a networked game.
-    // HasAuthority() returns true on the server and in single-player.
-    // In single-player this is always true — the check is safe and future-proof.
-    if (!HasAuthority()) return;
-
-    // Guard: nothing to do if the ASC is null or the list is empty.
     if (!AbilitySystemComponent) return;
-    if (DefaultAbilities.IsEmpty()) return;
 
-    // Iterate the list and grant each ability.
-    for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
-    // Range-for loop: runs once per item in the array.
-    // TSubclassOf<UGameplayAbility>& — a reference to the class pointer (not a copy).
+    const TArray<TSubclassOf<UGameplayAbility>>& AbilitiesToGrant =
+        (CharacterData && CharacterData->Abilities.Num() > 0)
+            ? CharacterData->Abilities
+            : DefaultAbilities;
+
+    for (const TSubclassOf<UGameplayAbility>& AbilityClass : AbilitiesToGrant)
     {
         if (!AbilityClass) continue;
-        // Skip any null entries (a designer may have left a slot blank).
-
-        // Build an ability spec: class + starting level + optional input binding.
-        FGameplayAbilitySpec AbilitySpec(AbilityClass, 1);
-        // Level 1 = the ability starts at its base power.
-        // Input binding (-1) = no key bound yet. We will bind in APlayerCharacter.
-
-        AbilitySystemComponent->GiveAbility(AbilitySpec);
-        // GiveAbility registers the ability with the ASC.
-        // The character can now call TryActivateAbility() to use it.
+        FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
+        AbilitySystemComponent->GiveAbility(Spec);
     }
 }
 
 void ABaseCharacter::InitDefaultAttributes()
-// Applies the DefaultAttributeEffect GameplayEffect to set starting stat values.
-// WHY use a GameplayEffect instead of hardcoding in the constructor?
-//   → Designers configure stats per character type in Blueprints (no recompile).
-//   → Stats can be reapplied on respawn or load cleanly via GAS.
-//   → Consistent with how all stat changes work — one system, not two.
 {
-    if (!AbilitySystemComponent || !DefaultAttributeEffect) return;
-    // If no effect is assigned in the Blueprint Class Defaults, skip silently.
-    // This is intentional: a bare ABaseCharacter has no stats until a child
-    // class assigns a DefaultAttributeEffect.
+    if (!AbilitySystemComponent) return;
 
-    // Build a context for the effect — who is applying it and why.
-    FGameplayEffectContextHandle ContextHandle =
-        AbilitySystemComponent->MakeEffectContext();
-    // MakeEffectContext() creates a context tagged "self-applied at startup."
-    // GAS uses context to track the source of effects for logging and gameplay logic.
+    // Prefer CharacterData if set; fall back to the legacy DefaultAttributeEffect.
+    // This lets existing Blueprints keep working before Data Assets are assigned.
+    TSubclassOf<UGameplayEffect> EffectToApply =
+        (CharacterData && CharacterData->AttributeEffect)
+            ? CharacterData->AttributeEffect
+            : DefaultAttributeEffect;
 
-    ContextHandle.AddSourceObject(this);
-    // Tag this actor as the source. "I am applying this effect to myself."
+    // Nothing to apply — character has no attribute initialisation configured yet.
+    if (!EffectToApply) return;
 
-    // Create a spec (a configured instance) from the effect class.
-    FGameplayEffectSpecHandle SpecHandle =
-        AbilitySystemComponent->MakeOutgoingSpec(
-            DefaultAttributeEffect,   // Which effect class
-            Attributes->GetCharacterLevel(),               // Apply at the character's current level
-            ContextHandle);           // Who is applying it
+    // Build a context so GAS knows who is applying this effect (self).
+    FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+    Context.AddSourceObject(this);
 
-    // GetCharacterLevel() reads our CharacterLevel attribute from UCRPGAttributeSet.
-    // Effect magnitudes can scale with level — e.g. MaxHealth = 80 + (CharacterLevel * 10).
+    // Create the effect spec at level 1 — level scaling not used yet.
+    FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
+        EffectToApply, 1.0f, Context);
 
-    if (SpecHandle.IsValid())
-    // IsValid() checks the spec was created successfully (effect class is not null).
+    if (Spec.IsValid())
     {
-        // Apply the effect to ourselves. This triggers PostGameplayEffectExecute
-        // in UCRPGAttributeSet, which clamps the values.
-        AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
     }
 }
-
 
 // ════════════════════════════════════════════════════════════════════════════
 // DEATH

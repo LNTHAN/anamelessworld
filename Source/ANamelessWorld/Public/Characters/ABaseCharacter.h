@@ -25,6 +25,8 @@
 #include "Inventory/UInventoryComponent.h"
 // remove from class declaration once UInventoryComponent is written.
 
+#include "Data/UCRPGCharacterData.h"
+
 #include "ABaseCharacter.generated.h"
 // Always last. UHT generates this at build time for reflection.
 
@@ -164,6 +166,8 @@ protected:
     // Designers configure this per character type in Blueprints — no code change needed
     // when adjusting stats. This is the "DataAsset instead of magic numbers" principle.
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Data")
+    UCRPGCharacterData* CharacterData;
 
     // ── State ────────────────────────────────────────────────────────────────
 

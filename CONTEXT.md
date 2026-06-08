@@ -1,21 +1,24 @@
 # ANamelessWorld — Session Context
 
 ## Last Session
-**Session 9** — completed 2026-06-06
+**Session 11** — completed 2026-06-08
 
 ## Last Completed Task
-Enemy moveset + ABossCharacter:
-- Created `GE_HeavyStrike` (Instant, Health Add -50)
-- Created `BP_GA_HeavyStrike` (trigger tag: Ability.Attack.Heavy, parent: GA_BasicAttack)
-- Added `HeavyStrikeChance = 30` to `AEnemyCharacter` header
-- Updated `ExecuteAITurn` to randomly pick Basic or Heavy based on threshold
-- Created `ABossCharacter` C++ subclass (HeavyStrikeChance = 60)
-- Created `GE_BossAttributes` (Override Health=200, MaxHealth=200)
-- Created `BP_BossCharacter` with both abilities and GE_BossAttributes
-- Tested 3-combatant fight: Player, Enemy, Boss all in initiative order ✓
+Data Assets — per-character configuration:
+- Created `UCRPGCharacterData` (UPrimaryDataAsset) with CharacterName, AttributeEffect, Abilities, HeavyStrikeChance
+- Modified `ABaseCharacter::InitDefaultAbilities` and `InitDefaultAttributes` to read from CharacterData first, fall back to legacy Blueprint properties
+- Modified `AEnemyCharacter::BeginPlay` to read HeavyStrikeChance from CharacterData
+- Created three Data Assets in Content/Data/: DA_PlayerCharacter (Nameless), DA_EnemyCharacter (The Narrator), DA_BossCharacter (The Protagonist)
+- Assigned Data Assets to BP_PlayerCharacter, BP_EnemyCharacter, BP_BossCharacter
+- Confirmed: battle works identically, character names reflect the Visual Novel world setting ✓
 
 ## Next Task
-**Session 10** — Command menu UI (player selects ability from a list)
+**Session 12** — Multiple abilities (at least 2 per character, protagonist's real kit: Lift Up, Silence, Provoke)
+
+## Key Notes
+- Don't paste large error logs in chat — first 5-10 lines is enough to diagnose
+- Hot reload errors always clear on full UE5 restart
+- GE modifier order matters: MaxHealth must be set before Health to avoid clamping
 
 ## Session History
 | Session | Topic | Status |
@@ -29,4 +32,6 @@ Enemy moveset + ABossCharacter:
 | 7 | APlayerCharacter, AEnemyCharacter, key binding, UTurnManager turn loop | ✓ Done |
 | 8 | Win/lose detection, WBP_BattleHUD with health bars and turn indicator | ✓ Done |
 | 9 | Enemy moveset, ABossCharacter, 3-combatant fight | ✓ Done |
-| 10 | Command menu UI | Upcoming |
+| 10 | Command menu, Cycle Target, Boss HP bar | ✓ Done |
+| 11 | Data Assets — UCRPGCharacterData, per-character DA assignments | ✓ Done |
+| 12 | Multiple abilities — protagonist's real kit: Lift Up, Silence, Provoke | Upcoming |
