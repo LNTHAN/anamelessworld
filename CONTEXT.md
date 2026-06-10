@@ -1,22 +1,22 @@
 # ANamelessWorld — Session Context
 
 ## Last Session
-**Session 12** — completed 2026-06-10
+**Session 13** — completed 2026-06-10
 
 ## Last Completed Task
-Protagonist's real combat kit:
-- Added gameplay tags: Ability.Support.Embolden, Ability.Debuff.Intimidate, Ability.Debuff.Provoke, State.Stunned, State.Advantage, State.Enraged
-- Created GA_Embolden, GA_Intimidate, GA_Provoke C++ ability classes
-- Created GE_Embolden, GE_Intimidate, GE_Provoke GameplayEffects with Has Duration + Grant Tags to Target Actor (UE5.6)
-- Created BP_GA_Embolden, BP_GA_Intimidate, BP_GA_Provoke Blueprint abilities with trigger tags
-- Replaced UseBasicAttack/UseHeavyStrike with UseEmbolden/UseIntimidate/UseProvoke on APlayerCharacter
-- Updated DA_PlayerCharacter Abilities: Embolden, Intimidate, Provoke
-- Updated WBP_CommandMenu: 4 buttons — Embolden, Intimidate, Provoke, Cycle Target
-- Confirmed: all three abilities fire and apply tags correctly via output log ✓
-- Tags have no gameplay effect yet — Stunned/Advantage/Enraged logic wired in Session 13
+d20 dice system — full combat resolution:
+- Created UCRPGCombatLibrary (UBlueprintFunctionLibrary) with RollD20, RollWithAdvantage, RollWithDisadvantage, GetModifier, CalculateDC, CalculateAC
+- Modified GA_BasicAttack: d20 + STR vs target AC hit/miss, Advantage check on attacker
+- Modified GA_Intimidate: contested roll INT modifier vs target WIS DC, stun only on success
+- Modified UTurnManager::BeginTurn: skip turn if State.Stunned tag is active
+- Modified AEnemyCharacter::ExecuteAITurn: Enraged check, Disadvantage roll, self-damage on miss
+- Added D&D core stats to GE_DefaultAttributes (STR/DEX/INT/WIS/CHA/CON all set to 10–16)
+- GE durations set to 60s as safety net — proper turn-based removal in future polish pass
+- Confirmed: hit/miss, Advantage, Stunned skip, Enraged self-damage all working ✓
+- Known: GA_BasicAttack runs a second hit check on self-damage path — polish pass later
 
 ## Next Task
-**Session 13** — d20 dice system (roll + modifier vs DC, Advantage/Disadvantage, Natural 20/1)
+**Session 14** — Character models + animations (Mixamo free assets, attack/hurt/death state machine)
 
 ## Key Notes
 - Don't paste large error logs in chat — first 5-10 lines is enough to diagnose
@@ -38,4 +38,5 @@ Protagonist's real combat kit:
 | 10 | Command menu, Cycle Target, Boss HP bar | ✓ Done |
 | 11 | Data Assets — UCRPGCharacterData, per-character DA assignments | ✓ Done |
 | 12 | Protagonist's real kit — Embolden, Intimidate, Provoke | ✓ Done |
-| 13 | d20 dice system — roll + modifier vs DC, Advantage/Disadvantage, Natural 20/1 | Upcoming |
+| 13 | d20 dice system — UCRPGCombatLibrary, hit/miss, Stunned skip, Enraged self-damage | ✓ Done |
+| 14 | Character models + animations (Mixamo, attack/hurt/death state machine) | Upcoming |

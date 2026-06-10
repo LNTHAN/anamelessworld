@@ -4,7 +4,8 @@
 //          Read UTurnManager.h first — all the "why" comments live there.
 
 #include "TurnManager/UTurnManager.h"
-#include "Characters/ABaseCharacter.h"  
+#include "Characters/ABaseCharacter.h"
+#include "AbilitySystemComponent.h"  
 // Full include here (not just forward declaration) because in this file
 // we actually CALL functions on ABaseCharacter — GetDexterity(), IsAlive(), etc.
 // The .h only stored a pointer, so a forward declaration was enough there.
@@ -260,6 +261,22 @@ void UTurnManager::BeginTurn()
     {
         CurrentState = ETurnState::EnemyTurn;
         UE_LOG(LogTemp, Log, TEXT("UTurnManager: ENEMY TURN — %s"), *ActiveCharacter->GetName());
+    }
+
+    // Check if the current combatant has the State.Stunned tag.
+    // If so, skip their turn and advance to the next combatant.
+    // State.Stunned is applied by GA_Intimidate for 1 turn.
+    UAbilitySystemComponent* ASC = ActiveCharacter->GetAbilitySystemComponent();
+    if (ASC && ASC->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Stunned"))))
+    {
+        const FString StunnedName = ActiveCharacter->GetName();
+        UE_LOG(LogTemp, Log, TEXT("UTurnManager: %s is Stunned — skipping turn."),
+            *StunnedName);
+
+        // End the turn immediately — this calls BeginTurn() again for the next combatant.
+        EndTurn();
+        return;
     }
 
     // Broadcast to all listeners: a new turn has started.

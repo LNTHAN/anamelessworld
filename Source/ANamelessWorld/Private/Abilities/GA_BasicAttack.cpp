@@ -12,6 +12,9 @@
 #include "Characters/ABaseCharacter.h"
 // Full include (not just forward declaration) because we call IsAlive() on the target.
 
+#include "Utilities/UCRPGCombatLibrary.h"
+#include "Attributes/UCRPGAttributeSet.h"
+
 // Note: AbilitySystemBlueprintLibrary not needed — we call GetAbilitySystemComponent()
 // directly on ABaseCharacter since it implements IAbilitySystemInterface.
 
@@ -128,62 +131,78 @@ void UGA_BasicAttack::ActivateAbility(
     }
 
 
-    // ── Step 4: Apply GE_DamageInstant to the target ──────────────────────
-    //
-    // Applying a GameplayEffect is always three steps:
-    //   a) Make a context  — who is doing this and why?
-    //   b) Make a spec     — a configured "instance" of the effect class
-    //   c) Apply the spec  — execute the math on the target's ASC
-    if (DamageEffectClass)
-    // Guard: only apply if a damage effect was assigned in the Blueprint.
-    // If DamageEffectClass is null, the ability fires but deals no damage.
-    // This would be a designer error (forgot to assign GE_DamageInstant),
-    // not a code error, so we don't crash — just log and finish cleanly.
+    // ── Step 4: Attack roll — d20 + STR modifier vs target AC ─────────────
+    // Hit/miss is resolved before damage is applied.
+    // AC = 10 + target DEX modifier. Attacker rolls d20 + STR modifier.
+    // Meet or beat AC = hit. Below AC = miss.
+
+    const UCRPGAttributeSet* AttackerAttributes = Cast<UCRPGAttributeSet>(
+        ActorInfo->AbilitySystemComponent->GetAttributeSet(
+            UCRPGAttributeSet::StaticClass()));
+
+    const UCRPGAttributeSet* TargetAttributes = Cast<UCRPGAttributeSet>(
+        TargetASC->GetAttributeSet(UCRPGAttributeSet::StaticClass()));
+
+    if (!AttackerAttributes || !TargetAttributes)
     {
-        // a) Context — "who is applying this effect?"
-        //    ActorInfo->AbilitySystemComponent is OUR ASC (the attacker's).
-        //    We use it to build a context that says "this attacker hit this target."
-        FGameplayEffectContextHandle ContextHandle =
-            ActorInfo->AbilitySystemComponent->MakeEffectContext();
+        UE_LOG(LogTemp, Warning,
+            TEXT("GA_BasicAttack: Could not read AttributeSets."));
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+        return;
+    }
 
-        ContextHandle.AddSourceObject(this);
-        // AddSourceObject tags the ability itself as the source.
-        // GAS logs and damage number systems use this to know "what caused this hit."
+    // Check if the attacker has State.Advantage (from GA_Embolden).
+    // If so, roll 2d20 and take the higher result.
+    const bool bHasAdvantage = ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Advantage")));
 
-        // b) Spec — a configured instance of the effect class at our ability's level.
-        //    GetAbilityLevel() returns 1 by default (we set it to 1 in InitDefaultAbilities).
-        //    If DamageEffectClass scales with level (e.g. "damage = 10 + level * 5"),
-        //    that scaling is defined in the GE Blueprint — we just pass the level here.
-        FGameplayEffectSpecHandle SpecHandle =
-            ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-                DamageEffectClass,      // Which effect (GE_DamageInstant Blueprint)
-                GetAbilityLevel(),      // At this level
-                ContextHandle);         // With this context
+    const int32 RawRoll = bHasAdvantage
+        ? UCRPGCombatLibrary::RollWithAdvantage()
+        : UCRPGCombatLibrary::RollD20();
 
-        // c) Apply — execute the effect on the TARGET's ASC (not our own).
-        if (SpecHandle.IsValid())
+    const int32 STRModifier = UCRPGCombatLibrary::GetModifier(
+        AttackerAttributes->GetStrength());
+
+    const int32 TargetAC = UCRPGCombatLibrary::CalculateAC(
+        TargetAttributes->GetDexterity());
+
+    const int32 FinalRoll = RawRoll + STRModifier;
+
+    UE_LOG(LogTemp, Log,
+        TEXT("GA_BasicAttack: %s rolled %d + %d (STR) = %d vs AC %d.%s"),
+        *GetAvatarActorFromActorInfo()->GetName(),
+        RawRoll, STRModifier, FinalRoll, TargetAC,
+        bHasAdvantage ? TEXT(" [Advantage]") : TEXT(""));
+
+    if (FinalRoll >= TargetAC)
+    {
+        // Hit — apply damage.
+        if (DamageEffectClass)
         {
-            // ApplyGameplayEffectSpecToSelf applies TO the ASC it's called on.
-            // We call it on TargetASC → the target takes the damage.
-            TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-            // *SpecHandle.Data.Get() — unwraps the shared pointer to get
-            // the raw FGameplayEffectSpec reference that the function expects.
+            FGameplayEffectContextHandle ContextHandle =
+                ActorInfo->AbilitySystemComponent->MakeEffectContext();
+            ContextHandle.AddSourceObject(this);
 
-            // UE5.6 has strict compile-time format string checking — function calls
-            // inside UE_LOG can confuse the validator. Extract to local variables first.
-            const FString AttackerName = GetAvatarActorFromActorInfo()
-                ? GetAvatarActorFromActorInfo()->GetName()
-                : TEXT("Unknown");
-            const FString TargetName = TargetCharacter->GetName();
-            UE_LOG(LogTemp, Log,
-                TEXT("GA_BasicAttack: %s attacked %s."),
-                *AttackerName, *TargetName);
+            FGameplayEffectSpecHandle SpecHandle =
+                ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
+                    DamageEffectClass, GetAbilityLevel(), ContextHandle);
+
+            if (SpecHandle.IsValid())
+            {
+                TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+                UE_LOG(LogTemp, Log,
+                    TEXT("GA_BasicAttack: Hit! %s took damage."),
+                    *TargetCharacter->GetName());
+            }
         }
     }
     else
     {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_BasicAttack: DamageEffectClass is null. Assign GE_DamageInstant in the Blueprint Class Defaults."));
+        // Miss — no damage applied.
+        UE_LOG(LogTemp, Log,
+            TEXT("GA_BasicAttack: Miss! %s dodged the attack."),
+            *TargetCharacter->GetName());
     }
 
 

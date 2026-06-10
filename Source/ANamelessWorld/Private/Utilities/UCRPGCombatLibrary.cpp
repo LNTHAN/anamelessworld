@@ -1,0 +1,55 @@
+// UCRPGCombatLibrary.cpp
+// PURPOSE: Implements the d20 dice roll functions.
+//          All functions are static — no instance needed, call directly from anywhere.
+
+#include "Utilities/UCRPGCombatLibrary.h"
+
+
+int32 UCRPGCombatLibrary::RollD20()
+{
+    // FMath::RandRange is inclusive on both ends — RandRange(1, 20) returns 1 to 20.
+    return FMath::RandRange(1, 20);
+}
+
+int32 UCRPGCombatLibrary::RollWithAdvantage()
+{
+    // Roll twice, take the higher result.
+    // Advantage shifts the probability curve in the roller's favour —
+    // the chance of rolling 15+ goes from 30% to 51% with Advantage.
+    const int32 Roll1 = RollD20();
+    const int32 Roll2 = RollD20();
+    return FMath::Max(Roll1, Roll2);
+}
+
+int32 UCRPGCombatLibrary::RollWithDisadvantage()
+{
+    // Roll twice, take the lower result.
+    // Disadvantage mirrors Advantage — same code, different pick function.
+    // An Enraged enemy is off-balance: likely to swing wild and miss.
+    const int32 Roll1 = RollD20();
+    const int32 Roll2 = RollD20();
+    return FMath::Min(Roll1, Roll2);
+}
+
+int32 UCRPGCombatLibrary::GetModifier(float StatScore)
+{
+    // D&D 5e formula: floor((Score - 10) / 2)
+    // FMath::FloorToInt rounds toward negative infinity — correct for negative values.
+    // Example: Score 8 → (8 - 10) / 2 = -1.0 → floor = -1 (not 0).
+    return FMath::FloorToInt((StatScore - 10.0f) / 2.0f);
+}
+
+int32 UCRPGCombatLibrary::CalculateDC(int32 Modifier)
+{
+    // Difficulty Class: the number a target must meet or beat to resist an effect.
+    // Base 8 is the D&D 5e standard — even a character with +0 modifier
+    // has a DC of 8, meaning a target needs to roll 8+ to resist.
+    return 8 + Modifier;
+}
+
+int32 UCRPGCombatLibrary::CalculateAC(float DexScore)
+{
+    // Armor Class: the number an attacker must meet or beat to land a hit.
+    // Base 10 + DEX modifier. Equipment bonuses added on top later.
+    return 10 + GetModifier(DexScore);
+}

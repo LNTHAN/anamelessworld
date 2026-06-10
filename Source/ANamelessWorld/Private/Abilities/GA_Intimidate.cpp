@@ -6,6 +6,8 @@
 #include "Abilities/GA_Intimidate.h"
 #include "AbilitySystemComponent.h"
 #include "Characters/ABaseCharacter.h"
+#include "Utilities/UCRPGCombatLibrary.h"
+#include "Attributes/UCRPGAttributeSet.h"
 
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -57,9 +59,11 @@ void UGA_Intimidate::ActivateAbility(
         return;
     }
 
-    // ── Step 3: Apply State.Stunned to the target's ASC ───────────────────
-    // Stunned is applied to the ENEMY's ASC. UTurnManager will check for
-    // this tag at the start of each turn and skip the character if present.
+    // ── Step 3: Contested roll — INT vs target WIS DC ─────────────────────
+    // The protagonist's INT modifier sets how hard it is to resist.
+    // The target's WIS modifier sets the DC they need to beat.
+    // If the protagonist's roll meets or beats the DC, the stun lands.
+
     UAbilitySystemComponent* TargetASC =
         TargetCharacter->GetAbilitySystemComponent();
 
@@ -71,30 +75,68 @@ void UGA_Intimidate::ActivateAbility(
         return;
     }
 
-    if (IntimidateEffectClass)
+    // Get protagonist's INT modifier from their AttributeSet.
+    const UCRPGAttributeSet* CasterAttributes = Cast<UCRPGAttributeSet>(
+        ActorInfo->AvatarActor->FindComponentByClass<UAbilitySystemComponent>()
+            ->GetAttributeSet(UCRPGAttributeSet::StaticClass()));
+
+    // Get target's WIS modifier to build the DC.
+    const UCRPGAttributeSet* TargetAttributes = Cast<UCRPGAttributeSet>(
+        TargetASC->GetAttributeSet(UCRPGAttributeSet::StaticClass()));
+
+    if (!CasterAttributes || !TargetAttributes)
     {
-        FGameplayEffectContextHandle ContextHandle =
-            ActorInfo->AbilitySystemComponent->MakeEffectContext();
-        ContextHandle.AddSourceObject(this);
+        UE_LOG(LogTemp, Warning,
+            TEXT("GA_Intimidate: Could not read AttributeSets. Ending ability."));
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+        return;
+    }
 
-        FGameplayEffectSpecHandle SpecHandle =
-            ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-                IntimidateEffectClass, GetAbilityLevel(), ContextHandle);
+    const int32 INTModifier = UCRPGCombatLibrary::GetModifier(
+        CasterAttributes->GetIntelligence());
 
-        if (SpecHandle.IsValid())
+    const int32 WisdomDC = UCRPGCombatLibrary::CalculateDC(
+        UCRPGCombatLibrary::GetModifier(TargetAttributes->GetWisdom()));
+
+    // Roll d20 + INT modifier and compare to the target's WIS DC.
+    const int32 RawRoll = UCRPGCombatLibrary::RollD20();
+    const int32 FinalRoll = RawRoll + INTModifier;
+
+    UE_LOG(LogTemp, Log,
+        TEXT("GA_Intimidate: Rolled %d + %d (INT) = %d vs DC %d."),
+        RawRoll, INTModifier, FinalRoll, WisdomDC);
+
+    if (FinalRoll >= WisdomDC)
+    {
+        // Success — apply the stun.
+        if (IntimidateEffectClass)
         {
-            TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+            FGameplayEffectContextHandle ContextHandle =
+                ActorInfo->AbilitySystemComponent->MakeEffectContext();
+            ContextHandle.AddSourceObject(this);
 
-            const FString TargetName = TargetCharacter->GetName();
-            UE_LOG(LogTemp, Log,
-                TEXT("GA_Intimidate: %s is now Stunned — loses next turn."),
-                *TargetName);
+            FGameplayEffectSpecHandle SpecHandle =
+                ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
+                    IntimidateEffectClass, GetAbilityLevel(), ContextHandle);
+
+            if (SpecHandle.IsValid())
+            {
+                TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+                const FString TargetName = TargetCharacter->GetName();
+                UE_LOG(LogTemp, Log,
+                    TEXT("GA_Intimidate: Success! %s is now Stunned — loses next turn."),
+                    *TargetName);
+            }
         }
     }
     else
     {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_Intimidate: IntimidateEffectClass is null. Assign GE_Intimidate in the Blueprint Class Defaults."));
+        // Failure — the target resisted. Mana is still spent.
+        const FString TargetName = TargetCharacter->GetName();
+        UE_LOG(LogTemp, Log,
+            TEXT("GA_Intimidate: Failed. %s resisted the intimidation."),
+            *TargetName);
     }
 
     // ── Step 4: End cleanly ────────────────────────────────────────────────
