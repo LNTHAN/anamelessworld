@@ -13,6 +13,12 @@ void AEnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
     // Combat setup is handled by SetupCombat(), called from the Level Blueprint.
+    // If a CharacterData asset is assigned, override the hardcoded HeavyStrikeChance.
+    // This lets the Data Asset be the single source of truth for AI behaviour tuning.
+    if (CharacterData)
+    {
+        HeavyStrikeChance = CharacterData->HeavyStrikeChance;
+    }
 }
 
 void AEnemyCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget)

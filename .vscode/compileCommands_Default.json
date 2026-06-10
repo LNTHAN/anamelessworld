@@ -24,7 +24,119 @@
 		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
 	},
 	{
-		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Attributes/UCPRGAttributeSet.cpp",
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Abilities/GA_BasicAttack.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Abilities/GA_Embolden.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Abilities/GA_Intimidate.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Abilities/GA_Provoke.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Attributes/UCRPGAttributeSet.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Characters/ABaseCharacter.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Characters/ABossCharacter.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Characters/AEnemyCharacter.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Characters/APlayerCharacter.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/Inventory/UInventoryComponent.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Private/TurnManager/UTurnManager.cpp",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Abilities/GA_BasicAttack.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Abilities/GA_Embolden.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Abilities/GA_Intimidate.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Abilities/GA_Provoke.h",
 		"arguments": [
 			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
 			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
@@ -33,6 +145,70 @@
 	},
 	{
 		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Attributes/UCRPGAttributeSet.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Characters/ABaseCharacter.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Characters/ABossCharacter.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Characters/AEnemyCharacter.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Characters/APlayerCharacter.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Data/UCRPGCharacterData.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Inventory/InventoryTypes.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/Inventory/UInventoryComponent.h",
+		"arguments": [
+			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"
+		],
+		"directory": "/Users/Shared/Epic Games/UE_5.6/Engine/Source"
+	},
+	{
+		"file": "/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/Source/ANamelessWorld/Public/TurnManager/UTurnManager.h",
 		"arguments": [
 			"/Applications/Xcode16.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
 			"@/Users/thannhamle/Documents/Unreal Projects/ANamelessWorld/.vscode/compileCommands_Default/ANamelessWorld.1.rsp"

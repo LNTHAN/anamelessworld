@@ -53,14 +53,23 @@ void APlayerCharacter::OnAttackPressed()
     FireAbility(FName("Ability.Attack.Basic"));
 }
 
-void APlayerCharacter::UseBasicAttack()
+void APlayerCharacter::UseEmbolden()
 {
-    FireAbility(FName("Ability.Attack.Basic"));
+    // Targets an ally — for now CurrentTarget is used.
+    // Session 13 will add a separate ally-targeting flow.
+    FireAbility(FName("Ability.Support.Embolden"));
 }
 
-void APlayerCharacter::UseHeavyStrike()
+void APlayerCharacter::UseIntimidate()
 {
-    FireAbility(FName("Ability.Attack.Heavy"));
+    // Targets the currently selected enemy.
+    FireAbility(FName("Ability.Debuff.Intimidate"));
+}
+
+void APlayerCharacter::UseProvoke()
+{
+    // Targets the currently selected enemy.
+    FireAbility(FName("Ability.Debuff.Provoke"));
 }
 
 // ── Target cycling ────────────────────────────────────────────────────────────

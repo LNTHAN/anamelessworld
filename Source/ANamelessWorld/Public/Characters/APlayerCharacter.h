@@ -34,11 +34,18 @@ public:
     void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget);
 
     // Called by command menu buttons to fire a specific ability.
+    // Emboldens a target ally — applies State.Advantage to their next roll.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
-    void UseBasicAttack();
+    void UseEmbolden();
 
+    // Intimidates a target enemy — applies State.Stunned, losing their next turn.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
-    void UseHeavyStrike();
+    void UseIntimidate();
+
+    // Provokes a target enemy — applies State.Enraged, forcing them to attack
+    // the protagonist with Disadvantage on their next turn.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void UseProvoke();
 
     // Cycles CurrentTarget to the next living enemy in the combatant list.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")

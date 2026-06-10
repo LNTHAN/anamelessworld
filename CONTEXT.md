@@ -1,19 +1,22 @@
 # ANamelessWorld — Session Context
 
 ## Last Session
-**Session 11** — completed 2026-06-08
+**Session 12** — completed 2026-06-10
 
 ## Last Completed Task
-Data Assets — per-character configuration:
-- Created `UCRPGCharacterData` (UPrimaryDataAsset) with CharacterName, AttributeEffect, Abilities, HeavyStrikeChance
-- Modified `ABaseCharacter::InitDefaultAbilities` and `InitDefaultAttributes` to read from CharacterData first, fall back to legacy Blueprint properties
-- Modified `AEnemyCharacter::BeginPlay` to read HeavyStrikeChance from CharacterData
-- Created three Data Assets in Content/Data/: DA_PlayerCharacter (Nameless), DA_EnemyCharacter (The Narrator), DA_BossCharacter (The Protagonist)
-- Assigned Data Assets to BP_PlayerCharacter, BP_EnemyCharacter, BP_BossCharacter
-- Confirmed: battle works identically, character names reflect the Visual Novel world setting ✓
+Protagonist's real combat kit:
+- Added gameplay tags: Ability.Support.Embolden, Ability.Debuff.Intimidate, Ability.Debuff.Provoke, State.Stunned, State.Advantage, State.Enraged
+- Created GA_Embolden, GA_Intimidate, GA_Provoke C++ ability classes
+- Created GE_Embolden, GE_Intimidate, GE_Provoke GameplayEffects with Has Duration + Grant Tags to Target Actor (UE5.6)
+- Created BP_GA_Embolden, BP_GA_Intimidate, BP_GA_Provoke Blueprint abilities with trigger tags
+- Replaced UseBasicAttack/UseHeavyStrike with UseEmbolden/UseIntimidate/UseProvoke on APlayerCharacter
+- Updated DA_PlayerCharacter Abilities: Embolden, Intimidate, Provoke
+- Updated WBP_CommandMenu: 4 buttons — Embolden, Intimidate, Provoke, Cycle Target
+- Confirmed: all three abilities fire and apply tags correctly via output log ✓
+- Tags have no gameplay effect yet — Stunned/Advantage/Enraged logic wired in Session 13
 
 ## Next Task
-**Session 12** — Multiple abilities (at least 2 per character, protagonist's real kit: Lift Up, Silence, Provoke)
+**Session 13** — d20 dice system (roll + modifier vs DC, Advantage/Disadvantage, Natural 20/1)
 
 ## Key Notes
 - Don't paste large error logs in chat — first 5-10 lines is enough to diagnose
@@ -34,4 +37,5 @@ Data Assets — per-character configuration:
 | 9 | Enemy moveset, ABossCharacter, 3-combatant fight | ✓ Done |
 | 10 | Command menu, Cycle Target, Boss HP bar | ✓ Done |
 | 11 | Data Assets — UCRPGCharacterData, per-character DA assignments | ✓ Done |
-| 12 | Multiple abilities — protagonist's real kit: Lift Up, Silence, Provoke | Upcoming |
+| 12 | Protagonist's real kit — Embolden, Intimidate, Provoke | ✓ Done |
+| 13 | d20 dice system — roll + modifier vs DC, Advantage/Disadvantage, Natural 20/1 | Upcoming |

@@ -15,91 +15,92 @@ Menu → Story Slideshow → Pre-battle Dialogue → Battle → Post-battle Dial
 | 4 | UTurnManager | ✓ |
 | 5 | GA_BasicAttack C++ | ✓ |
 | 6 | GE_DamageInstant + end-to-end damage test | ✓ |
+| 7 | APlayerCharacter + AEnemyCharacter subclasses, key-bound attack, UTurnManager wiring | ✓ |
+| 8 | Win/lose detection, WBP_BattleHUD with health bars and turn indicator | ✓ |
+| 9 | Enemy AI (auto-select move + target), ABossCharacter | ✓ |
+| 10 | Command menu, Cycle Target, Boss HP bar | ✓ |
+| 11 | Data Assets — UCRPGCharacterData, per-character DA assignments | ✓ |
 
 ---
 
-## Block A — Battle System Core (Sessions 7–13)
-Goal: 1 player vs 3 enemies taking turns, abilities fire, someone dies
+## Block A — Battle System Core (Sessions 12–14)
+Goal: Protagonist's real combat identity, d20 resolution, and character animations
 
 | # | Topic |
 |---|---|
-| 7 | APlayerCharacter + AEnemyCharacter subclasses, key-bound attack, UTurnManager wiring |
-| 8 | Turn order queue — initiative rolls determine who goes when, shown in order |
-| 9 | Enemy AI — enemies auto-select a move and target on their turn |
-| 10 | ABossCharacter — higher stats, different moveset |
-| 11 | Data Assets — each character loads stats + abilities from a data asset (no hardcoding) |
-| 12 | Multiple abilities — at least 2 per character (e.g. basic attack + special) |
-| 13 | Win/lose detection — all enemies dead = battle over; player dead = game over |
+| 12 | Protagonist's real kit — Lift Up (buff), Silence (debuff/stun), Provoke (enrage/redirect) |
+| 13 | d20 dice system — roll + modifier vs DC, Advantage/Disadvantage, Natural 20/1 |
+| 14 | Character models + animations — Mixamo free assets, attack/hurt/death state machine |
 
 ---
 
-## Block B — Battle UI (Sessions 14–17)
-Goal: Player can see HP, whose turn it is, and pick commands from a menu
+## Block B — Battle UI (Session 15)
+Goal: Player can see the full turn picture
 
 | # | Topic |
 |---|---|
-| 14 | Health bars — UMG widget showing HP for all characters |
 | 15 | Turn order indicator — UI strip showing upcoming turn order (like FF Tactics) |
-| 16 | Command menu — player selects ability from a list on their turn |
-| 17 | Ability animations — characters play attack/hurt/death animations (no VFX/SFX) |
 
 ---
 
-## Block C — Dialogue + Story (Sessions 18–21)
+## Block C — Dialogue + Story (Sessions 16–19)
 Goal: Story wraps around the battle
 
 | # | Topic |
 |---|---|
-| 18 | Dialogue system — text box, character name, advance on input |
-| 19 | Pre-battle dialogue — conversation triggers when battle field loads |
-| 20 | Post-battle dialogue — triggers when all enemies die |
-| 21 | Story slideshow — sequence of images with text (intro before battle) |
+| 16 | Dialogue system — text box, character name, advance on input |
+| 17 | Pre-battle dialogue — conversation triggers when battle field loads |
+| 18 | Post-battle dialogue — triggers when all enemies die |
+| 19 | Story slideshow — opening sequence (the girl scene, Visual Novel world dies) |
 
 ---
 
-## Block D — Menu + Audio (Sessions 22–23)
+## Block D — Menu + Audio (Sessions 20–21)
 Goal: Game has a proper start and music
 
 | # | Topic |
 |---|---|
-| 22 | Main menu — Start Game button, transitions to story slideshow |
-| 23 | BGM — 1 track starts at menu, persists through slideshow and battle, stops at end |
+| 20 | Main menu — Start Game button, transitions to story slideshow |
+| 21 | BGM — 1 track starts at menu, persists through slideshow and battle, stops at end |
 
 ---
 
-## Block E — Ending Sequence (Sessions 24–25)
+## Block E — Ending Sequence (Sessions 22–24)
 Goal: Battle ends with a proper cinematic finish
 
 | # | Topic |
 |---|---|
-| 24 | Chapter complete screen — fade to black after post-battle dialogue |
-| 25 | "To Be Continued..." screen — final card, then credits or loop to menu |
+| 22 | Chapter complete screen — fade to black after post-battle dialogue |
+| 23 | "To Be Continued..." screen — final card, then loop to menu |
+| 24 | Buffer — polish, bugfix, full playthrough pass |
 
 ---
 
 ## Total
-- Sessions done: 6
-- Sessions remaining: ~19
-- At 2 sessions/day: **~10 days**
-- Realistic (some sessions expand): **2–3 weeks**
+- Sessions done: 11
+- Sessions remaining: ~13
+- At 2 sessions/day: **~7 days**
+- Realistic (some sessions expand): **8–9 days**
 
 ---
 
-## 2-Sessions/Day Calendar
-Target start: 2026-06-03 (Session 7)
-
+## Revised Calendar (from Jun 08)
 | Day | Date | Session A | Session B |
 |---|---|---|---|
-| 1 | Jun 03 | 7 — APlayerCharacter + AEnemyCharacter subclasses, key-bound attack | 8 — Turn order queue, initiative rolls, turn order UI |
-| 2 | Jun 04 | 9 — Enemy AI (auto-select move + target) | 10 — ABossCharacter (higher stats, different moveset) |
-| 3 | Jun 05 | 11 — Data Assets (load stats + abilities per character) | 12 — Multiple abilities (2 per character) |
-| 4 | Jun 06 | 13 — Win/lose detection (all enemies dead / player dead) | 14 — Health bars UMG widget |
-| 5 | Jun 07 | 15 — Turn order indicator UI strip | 16 — Command menu (player picks ability on their turn) |
-| 6 | Jun 08 | 17 — Ability animations (attack / hurt / death, no VFX) | 18 — Dialogue system (text box, name, advance on input) |
-| 7 | Jun 09 | 19 — Pre-battle dialogue trigger | 20 — Post-battle dialogue trigger |
-| 8 | Jun 10 | 21 — Story slideshow (images + text sequence) | 22 — Main menu (Start Game → slideshow) |
-| 9 | Jun 11 | 23 — BGM (1 track, persists through slideshow + battle) | 24 — Chapter complete screen + fade to black |
-| 10 | Jun 12 | 25 — "To Be Continued..." screen | Buffer / polish + bugfix |
+| 1 | Jun 08 | 12 — Protagonist real kit (Lift Up, Silence, Provoke) | 13 — d20 dice system |
+| 2 | Jun 09 | 14 — Character models + animations (Mixamo) | 15 — Turn order indicator UI |
+| 3 | Jun 10 | 16 — Dialogue system | 17 — Pre-battle dialogue |
+| 4 | Jun 11 | 18 — Post-battle dialogue | 19 — Story slideshow |
+| 5 | Jun 12 | 20 — Main menu | 21 — BGM |
+| 6 | Jun 13 | 22 — Chapter complete screen | 23 — "To Be Continued..." screen |
+| 7 | Jun 14 | 24 — Polish + full playthrough pass | Buffer |
 
-**Target completion: ~2026-06-12**
-Buffer week for overscoping: **2026-06-19 hard deadline**
+**Target completion: ~2026-06-14**
+Hard deadline with buffer: **2026-06-19**
+
+---
+
+## Asset Plan
+- **Character models + animations:** Mixamo (free) — import FBX into UE5, retarget to UE5 mannequin skeleton
+- **BGM:** Free/royalty-free track (itch.io or freemusicarchive.org)
+- **UI art:** Placeholder colored panels for MVP; replace post-deadline if desired
