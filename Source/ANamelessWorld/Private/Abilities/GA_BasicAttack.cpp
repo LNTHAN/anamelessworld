@@ -151,6 +151,14 @@ void UGA_BasicAttack::ActivateAbility(
         return;
     }
 
+    // Trigger attack animation on the caster.
+    ABaseCharacter* Caster = Cast<ABaseCharacter>(
+        GetAvatarActorFromActorInfo());
+    if (Caster)
+    {
+        Caster->SetIsAttacking(true);
+    }
+
     // Check if the attacker has State.Advantage (from GA_Embolden).
     // If so, roll 2d20 and take the higher result.
     const bool bHasAdvantage = ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(
@@ -205,10 +213,35 @@ void UGA_BasicAttack::ActivateAbility(
             *TargetCharacter->GetName());
     }
 
+    // Store context so FinishAttack() can call EndAbility after the timer fires.
+    PendingHandle = Handle;
+    PendingActorInfo = ActorInfo;
+    PendingActivationInfo = ActivationInfo;
 
-    // ── Step 5: End the ability (clean success path) ───────────────────────
-    //
-    // bReplicateEndAbility = true  — clients are notified
-    // bWasCancelled = false        — this was a clean finish, not a cancel
-    EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+    // Delay the animation reset and EndAbility so the attack animation has
+    // time to play. AttackAnimDuration is set in Blueprint Class Defaults.
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            AttackTimerHandle,
+            this,
+            &UGA_BasicAttack::FinishAttack,
+            AttackAnimDuration,
+            false);
+    }
+    else
+    {
+        FinishAttack();
+    }
+}
+
+void UGA_BasicAttack::FinishAttack()
+{
+    ABaseCharacter* Caster = Cast<ABaseCharacter>(GetAvatarActorFromActorInfo());
+    if (Caster)
+    {
+        Caster->SetIsAttacking(false);
+    }
+
+    EndAbility(PendingHandle, PendingActorInfo, PendingActivationInfo, true, false);
 }

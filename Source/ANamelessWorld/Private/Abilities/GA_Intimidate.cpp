@@ -106,6 +106,9 @@ void UGA_Intimidate::ActivateAbility(
         TEXT("GA_Intimidate: Rolled %d + %d (INT) = %d vs DC %d."),
         RawRoll, INTModifier, FinalRoll, WisdomDC);
 
+    ABaseCharacter* Caster = Cast<ABaseCharacter>(GetAvatarActorFromActorInfo());
+    if (Caster) Caster->SetIsAttacking(true);
+
     if (FinalRoll >= WisdomDC)
     {
         // Success — apply the stun.
@@ -139,6 +142,21 @@ void UGA_Intimidate::ActivateAbility(
             *TargetName);
     }
 
-    // ── Step 4: End cleanly ────────────────────────────────────────────────
-    EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+    // ── Step 4: Delay end so attack animation has time to play ────────────
+    if (UWorld* World = GetWorld())
+    {
+        FTimerHandle TimerHandle;
+        FTimerDelegate Delegate;
+        Delegate.BindLambda([this, Handle, ActorInfo, ActivationInfo, Caster]()
+        {
+            if (Caster) Caster->SetIsAttacking(false);
+            EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+        });
+        World->GetTimerManager().SetTimer(TimerHandle, Delegate, 0.8f, false);
+    }
+    else
+    {
+        if (Caster) Caster->SetIsAttacking(false);
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+    }
 }

@@ -74,6 +74,9 @@ void UGA_Embolden::ActivateAbility(
         return;
     }
 
+    ABaseCharacter* Caster = Cast<ABaseCharacter>(GetAvatarActorFromActorInfo());
+    if (Caster) Caster->SetIsAttacking(true);
+
     if (EmboldenerEffectClass)
     {
         FGameplayEffectContextHandle ContextHandle =
@@ -100,6 +103,21 @@ void UGA_Embolden::ActivateAbility(
             TEXT("GA_Embolden: EmboldenerEffectClass is null. Assign GE_Embolden in the Blueprint Class Defaults."));
     }
 
-    // ── Step 4: End cleanly ────────────────────────────────────────────────
-    EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+    // ── Step 4: Delay end so attack animation has time to play ────────────
+    if (UWorld* World = GetWorld())
+    {
+        FTimerHandle TimerHandle;
+        FTimerDelegate Delegate;
+        Delegate.BindLambda([this, Handle, ActorInfo, ActivationInfo, Caster]()
+        {
+            if (Caster) Caster->SetIsAttacking(false);
+            EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+        });
+        World->GetTimerManager().SetTimer(TimerHandle, Delegate, 0.8f, false);
+    }
+    else
+    {
+        if (Caster) Caster->SetIsAttacking(false);
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+    }
 }

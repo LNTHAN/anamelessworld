@@ -174,8 +174,8 @@ void ABaseCharacter::Die()
     // Two GameplayEffects landing on the same frame could both trigger Die().
     // The bIsDead flag ensures the sequence only runs once.
     if (bIsDead) return;
-
     bIsDead = true;
+    SetIsDead(true);
     // Set the flag immediately so any re-entrant calls are blocked.
 
     // Disable further ability activation — a dead character cannot act.
@@ -241,7 +241,32 @@ float ABaseCharacter::GetDexterity() const
     return Attributes->GetDexterity();
 }
 
+void ABaseCharacter::SetIsAttacking(bool bAttacking)
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (!AnimInstance) return;
 
+    FProperty* Property = AnimInstance->GetClass()->FindPropertyByName(FName("bIsAttacking"));
+    if (Property)
+    {
+        bool* ValuePtr = Property->ContainerPtrToValuePtr<bool>(AnimInstance);
+        if (ValuePtr) *ValuePtr = bAttacking;
+    }
+}
+
+void ABaseCharacter::SetIsDead(bool bDead)
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (!AnimInstance) return;
+
+    FProperty* Property = AnimInstance->GetClass()->FindPropertyByName(
+        FName("bIsDead"));
+    if (Property)
+    {
+        bool* ValuePtr = Property->ContainerPtrToValuePtr<bool>(AnimInstance);
+        if (ValuePtr) *ValuePtr = bDead;
+    }
+}
 // ════════════════════════════════════════════════════════════════════════════
 // NOTES FOR CHILD CLASSES
 // ════════════════════════════════════════════════════════════════════════════

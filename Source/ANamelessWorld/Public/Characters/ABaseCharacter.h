@@ -27,6 +27,9 @@
 
 #include "Data/UCRPGCharacterData.h"
 
+#include "Animation/AnimInstance.h"
+// For Animation
+
 #include "ABaseCharacter.generated.h"
 // Always last. UHT generates this at build time for reflection.
 
@@ -115,6 +118,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
     float GetMaxHealth() const;
 
+    // Sets bIsAttacking on the Animation Blueprint — called when an ability fires.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
+    void SetIsAttacking(bool bAttacking);
+
+    // Sets bIsDead on the Animation Blueprint — called when the character dies.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
+    void SetIsDead(bool bDead);
 
 protected:
 

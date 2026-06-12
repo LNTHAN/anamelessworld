@@ -34,12 +34,13 @@ Goal: Protagonist's real combat identity, d20 resolution, and character animatio
 
 ---
 
-## Block B — Battle UI (Session 15)
-Goal: Player can see the full turn picture
+## Block B — Battle UI (Sessions 15–16)
+Goal: Player can see what's happening and what's coming
 
 | # | Topic |
 |---|---|
-| 15 | Turn order indicator — UI strip showing upcoming turn order (like FF Tactics) |
+| 15 | Battle log — in-game text feed showing damage, misses, stuns, self-damage per action |
+| 16 | Turn order indicator — UI strip showing upcoming turn order (like FF Tactics) |
 
 ---
 

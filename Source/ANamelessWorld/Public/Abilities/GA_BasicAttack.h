@@ -11,6 +11,7 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "TimerManager.h"
 // UGameplayAbility — the GAS base class for all abilities.
 // Provides ActivateAbility(), CommitAbility(), EndAbility(), and
 // all the GAS plumbing (cost checking, cooldown, tag requirements).
@@ -56,16 +57,23 @@ protected:
 
     // ── Damage Effect ──────────────────────────────────────────────────────
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Ability")
-    // EditDefaultsOnly: designers assign GE_DamageInstant here in the
-    //                   Blueprint Class Defaults — no recompile needed to
-    //                   swap in a different damage effect.
     TSubclassOf<UGameplayEffect> DamageEffectClass;
-    // TSubclassOf<UGameplayEffect> — a pointer to a CLASS, not an instance.
-    // Same pattern as DefaultAttributeEffect on ABaseCharacter.
-    // At runtime, we create a spec from this class and apply it to the target.
-    //
-    // WHY a variable instead of hardcoding?
-    //   GA_BasicAttack, GA_HeavyStrike, GA_PoisonStrike could all use this
-    //   same C++ class — just with different DamageEffectClass values
-    //   assigned in their respective Blueprints. One C++ class, many variants.
+
+    // ── Attack animation duration ──────────────────────────────────────────
+    // How long to wait before resetting bIsAttacking and ending the ability.
+    // Set this to roughly match your attack animation clip length.
+    UPROPERTY(EditDefaultsOnly, Category = "ANW|Ability")
+    float AttackAnimDuration = 0.8f;
+
+private:
+
+    FTimerHandle AttackTimerHandle;
+
+    // Stored per-activation context so the timer callback can call EndAbility.
+    FGameplayAbilitySpecHandle PendingHandle;
+    const FGameplayAbilityActorInfo* PendingActorInfo = nullptr;
+    FGameplayAbilityActivationInfo PendingActivationInfo;
+
+    UFUNCTION()
+    void FinishAttack();
 };
