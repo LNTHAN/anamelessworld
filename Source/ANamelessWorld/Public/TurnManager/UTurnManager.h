@@ -183,6 +183,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Turn Manager")
     int32 GetRoundNumber() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Turn Manager")
+    TArray<ABaseCharacter*> GetTurnOrder() const;
+
 
 private:
 

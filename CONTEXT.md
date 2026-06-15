@@ -1,22 +1,19 @@
 # ANamelessWorld — Session Context
 
 ## Last Session
-**Session 13** — completed 2026-06-10
+**Session 16** — completed 2026-06-15
 
 ## Last Completed Task
-d20 dice system — full combat resolution:
-- Created UCRPGCombatLibrary (UBlueprintFunctionLibrary) with RollD20, RollWithAdvantage, RollWithDisadvantage, GetModifier, CalculateDC, CalculateAC
-- Modified GA_BasicAttack: d20 + STR vs target AC hit/miss, Advantage check on attacker
-- Modified GA_Intimidate: contested roll INT modifier vs target WIS DC, stun only on success
-- Modified UTurnManager::BeginTurn: skip turn if State.Stunned tag is active
-- Modified AEnemyCharacter::ExecuteAITurn: Enraged check, Disadvantage roll, self-damage on miss
-- Added D&D core stats to GE_DefaultAttributes (STR/DEX/INT/WIS/CHA/CON all set to 10–16)
-- GE durations set to 60s as safety net — proper turn-based removal in future polish pass
-- Confirmed: hit/miss, Advantage, Stunned skip, Enraged self-damage all working ✓
-- Known: GA_BasicAttack runs a second hit check on self-damage path — polish pass later
+Turn order indicator UI strip:
+- Added GetTurnOrder() to UTurnManager (C++) — returns combatants reordered from current actor
+- Created WBP_TurnSlot — one name plate per character, gold = active, dim = inactive
+- Created WBP_TurnOrderStrip — horizontal box, RefreshStrip rebuilds slots each turn
+- Added WBP_TurnOrderStrip to WBP_BattleHUD, wired to OnTurnStarted delegate
+- Initial strip populated from Level Blueprint after StartCombat
+- Known issue: all 3 turns fire simultaneously (AI calls EndTurn immediately without waiting for animation) — strip flickers through all 3 turns in one frame then stays on player
 
 ## Next Task
-**Session 14** — Character models + animations (Mixamo free assets, attack/hurt/death state machine)
+**Session 17** — Fix simultaneous turns: AI characters must wait for animation timer before calling EndTurn()
 
 ## Key Notes
 - Don't paste large error logs in chat — first 5-10 lines is enough to diagnose
@@ -39,4 +36,7 @@ d20 dice system — full combat resolution:
 | 11 | Data Assets — UCRPGCharacterData, per-character DA assignments | ✓ Done |
 | 12 | Protagonist's real kit — Embolden, Intimidate, Provoke | ✓ Done |
 | 13 | d20 dice system — UCRPGCombatLibrary, hit/miss, Stunned skip, Enraged self-damage | ✓ Done |
-| 14 | Character models + animations (Mixamo, attack/hurt/death state machine) | Upcoming |
+| 14 | Character models + animations — ABP_Nameless/Enemy/Boss, FProperty anim wiring | ✓ Done |
+| 15 | Battle log — UE_LOG damage/HP tracking in AttributeSet | ✓ Done |
+| 16 | Turn order indicator UI strip — WBP_TurnSlot, WBP_TurnOrderStrip, GetTurnOrder() | ✓ Done |
+| 17 | Fix simultaneous turns — AI EndTurn timing | Upcoming |

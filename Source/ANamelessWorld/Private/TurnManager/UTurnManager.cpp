@@ -161,6 +161,16 @@ int32 UTurnManager::GetRoundNumber() const
     return RoundNumber;
 }
 
+TArray<ABaseCharacter*> UTurnManager::GetTurnOrder() const
+{
+    TArray<ABaseCharacter*> Ordered;
+    for (int32 i = CurrentTurnIndex; i < Combatants.Num(); i++)
+        Ordered.Add(Combatants[i]);
+    for (int32 i = 0; i < CurrentTurnIndex; i++)
+        Ordered.Add(Combatants[i]);
+    return Ordered;
+}
+
 int32 UTurnManager::RollInitiative(ABaseCharacter* Character) const
 {
     // Roll a random number between 1 and 20 (the d20).
