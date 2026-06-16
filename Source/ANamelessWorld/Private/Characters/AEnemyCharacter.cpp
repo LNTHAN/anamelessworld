@@ -7,6 +7,7 @@
 #include "TurnManager/UTurnManager.h"
 #include "Utilities/UCRPGCombatLibrary.h"
 #include "Attributes/UCRPGAttributeSet.h"
+#include "TimerManager.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -104,10 +105,11 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
                 FGameplayEventData SelfPayload;
                 SelfPayload.Target = this;
 
+                SetIsAttacking(true);
                 UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
                     this, AttackTag, SelfPayload);
 
-                if (TurnManager) TurnManager->EndTurn();
+                EndTurnAfterDelay();
                 return;
             }
 
@@ -121,9 +123,25 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
     FGameplayEventData Payload;
     Payload.Target = PlayerTarget;
 
+    SetIsAttacking(true);
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
         this, AttackTag, Payload);
 
+    EndTurnAfterDelay();
+}
+
+void AEnemyCharacter::EndTurnAfterDelay()
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            TurnEndTimerHandle, this, &AEnemyCharacter::EndTurnNow, 2.0f, false);
+    }
+}
+
+void AEnemyCharacter::EndTurnNow()
+{
+    SetIsAttacking(false);
     if (TurnManager)
     {
         TurnManager->EndTurn();

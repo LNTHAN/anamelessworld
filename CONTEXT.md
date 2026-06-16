@@ -1,19 +1,19 @@
 # ANamelessWorld — Session Context
 
 ## Last Session
-**Session 16** — completed 2026-06-15
+**Session 17** — completed 2026-06-16
 
 ## Last Completed Task
-Turn order indicator UI strip:
-- Added GetTurnOrder() to UTurnManager (C++) — returns combatants reordered from current actor
-- Created WBP_TurnSlot — one name plate per character, gold = active, dim = inactive
-- Created WBP_TurnOrderStrip — horizontal box, RefreshStrip rebuilds slots each turn
-- Added WBP_TurnOrderStrip to WBP_BattleHUD, wired to OnTurnStarted delegate
-- Initial strip populated from Level Blueprint after StartCombat
-- Known issue: all 3 turns fire simultaneously (AI calls EndTurn immediately without waiting for animation) — strip flickers through all 3 turns in one frame then stays on player
+Fixed simultaneous turns and turn sequencing:
+- AEnemyCharacter: calls SetIsAttacking(true) in ExecuteAITurn(), 2s timer → EndTurnNow() → SetIsAttacking(false) → EndTurn()
+- APlayerCharacter: FireAbility() sets 2s timer → EndTurnNow() → EndTurn(). Covers ALL player abilities
+- GA_BasicAttack: FinishTurn() is now a no-op; EndTurn responsibility moved to character classes
+- Damage log fixed: only logs when Magnitude < 0 (real damage, not GE initialization)
+- Added CachedCaster (ABaseCharacter*) to GA_BasicAttack for post-EndAbility access
+- Added forward declaration `class ABaseCharacter;` to GA_BasicAttack.h
 
 ## Next Task
-**Session 17** — Fix simultaneous turns: AI characters must wait for animation timer before calling EndTurn()
+**Session 18** — Dialogue system: text box, character name, advance on input (Block C start)
 
 ## Key Notes
 - Don't paste large error logs in chat — first 5-10 lines is enough to diagnose
@@ -39,4 +39,4 @@ Turn order indicator UI strip:
 | 14 | Character models + animations — ABP_Nameless/Enemy/Boss, FProperty anim wiring | ✓ Done |
 | 15 | Battle log — UE_LOG damage/HP tracking in AttributeSet | ✓ Done |
 | 16 | Turn order indicator UI strip — WBP_TurnSlot, WBP_TurnOrderStrip, GetTurnOrder() | ✓ Done |
-| 17 | Fix simultaneous turns — AI EndTurn timing | Upcoming |
+| 17 | Fix simultaneous turns — AI EndTurn timing, enemy animations | ✓ Done |

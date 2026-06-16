@@ -20,6 +20,9 @@
 // Always last. UHT generates this at build time.
 
 
+// ── Forward Declarations ───────────────────────────────────────────────────────
+class ABaseCharacter;
+
 // ── Class Declaration ──────────────────────────────────────────────────────────
 
 UCLASS()
@@ -66,8 +69,9 @@ protected:
     float AttackAnimDuration = 0.8f;
 
 private:
-
     FTimerHandle AttackTimerHandle;
+    FTimerHandle PostAttackTimerHandle;
+    ABaseCharacter* CachedCaster = nullptr;
 
     // Stored per-activation context so the timer callback can call EndAbility.
     FGameplayAbilitySpecHandle PendingHandle;
@@ -76,4 +80,6 @@ private:
 
     UFUNCTION()
     void FinishAttack();
+
+    void FinishTurn();
 };

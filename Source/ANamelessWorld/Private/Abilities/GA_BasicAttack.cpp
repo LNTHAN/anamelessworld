@@ -15,6 +15,8 @@
 #include "Utilities/UCRPGCombatLibrary.h"
 #include "Attributes/UCRPGAttributeSet.h"
 
+#include "Characters/APlayerCharacter.h"
+
 // Note: AbilitySystemBlueprintLibrary not needed — we call GetAbilitySystemComponent()
 // directly on ABaseCharacter since it implements IAbilitySystemInterface.
 
@@ -157,6 +159,7 @@ void UGA_BasicAttack::ActivateAbility(
     if (Caster)
     {
         Caster->SetIsAttacking(true);
+        CachedCaster = Caster;
     }
 
     // Check if the attacker has State.Advantage (from GA_Embolden).
@@ -237,6 +240,9 @@ void UGA_BasicAttack::ActivateAbility(
 
 void UGA_BasicAttack::FinishAttack()
 {
+    UE_LOG(LogTemp, Log, TEXT("GA_BasicAttack::FinishAttack — fired. CachedCaster: %s"),
+        CachedCaster ? *CachedCaster->GetName() : TEXT("NULL"));
+
     ABaseCharacter* Caster = Cast<ABaseCharacter>(GetAvatarActorFromActorInfo());
     if (Caster)
     {
@@ -244,4 +250,30 @@ void UGA_BasicAttack::FinishAttack()
     }
 
     EndAbility(PendingHandle, PendingActorInfo, PendingActivationInfo, true, false);
+
+    UWorld* World = GetWorld();
+    UE_LOG(LogTemp, Log, TEXT("GA_BasicAttack::FinishAttack — GetWorld() is %s. Setting FinishTurn timer."),
+        World ? TEXT("valid") : TEXT("NULL"));
+
+    if (World)
+    {
+        World->GetTimerManager().SetTimer(
+            PostAttackTimerHandle,
+            this,
+            &UGA_BasicAttack::FinishTurn,
+            1.0f,
+            false);
+    }
+    else
+    {
+        FinishTurn();
+    }
 }
+
+void UGA_BasicAttack::FinishTurn()
+{
+    // EndTurn is now handled by APlayerCharacter::EndTurnNow() and
+    // AEnemyCharacter::EndTurnNow() via their own timers.
+    // FinishTurn() is kept as a placeholder — no action needed here.
+}
+

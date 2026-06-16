@@ -39,4 +39,10 @@ public:
     // Default 30 = 30% chance per turn. Override per-instance in the editor.
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ANW|Combat")
     int32 HeavyStrikeChance = 30;
+
+private:
+    FTimerHandle TurnEndTimerHandle;
+
+    void EndTurnAfterDelay();
+    void EndTurnNow();
 };

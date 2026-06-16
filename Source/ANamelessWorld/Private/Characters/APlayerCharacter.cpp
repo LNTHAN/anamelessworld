@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayTagsModule.h"
 #include "TurnManager/UTurnManager.h"
+#include "TimerManager.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -43,7 +44,20 @@ void APlayerCharacter::FireAbility(const FName& TagName)
     FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TagName);
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, Tag, Payload);
 
-    TurnManager->EndTurn();
+    // End the player's turn after a delay so the animation has time to play.
+    // All player abilities go through FireAbility, so this covers every action.
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(TurnEndTimerHandle, this, &APlayerCharacter::EndTurnNow, 2.0f, false);
+    }
+}
+
+void APlayerCharacter::EndTurnNow()
+{
+    if (TurnManager)
+    {
+        TurnManager->EndTurn();
+    }
 }
 
 // ── Public ability functions (called by command menu buttons) ─────────────────

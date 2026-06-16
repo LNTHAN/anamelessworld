@@ -68,6 +68,8 @@ public:
     ABaseCharacter* CurrentTarget;
 
 private:
-    // Shared logic for firing any attack ability by tag.
     void FireAbility(const FName& TagName);
+
+    FTimerHandle TurnEndTimerHandle;
+    void EndTurnNow();
 };
