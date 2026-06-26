@@ -66,18 +66,31 @@ Goal: Game has a proper start and music
 
 ---
 
-## Block E — Ending Sequence (Sessions 22–23)
-Goal: Chapter 1 ends, Chapter 2 begins
+## Block E — Chapter Loop (Session 22)
+Goal: Chapter 1 ends, Chapter 2 begins — full cinematic loop
 
-| # | Topic |
-|---|---|
-| 22 | Ending slides → Chapter 1 Complete screen → Chapter 2: Here comes the Action title card → Beginning slides → Battle |
-| 23 | Polish — slide text display, ability VFX, damage numbers, Battle UI, Dialogue UI |
+| # | Topic | Status |
+|---|---|---|
+| 22 (pt 1) | Assets + screen widgets (ChapterCard, BattleCommenced, WorldFinished), Cinzel font, DESIGN_RATIONALE.md | ✓ Done |
+| 22 (pt 2) | Integration: wire chapter loop into TestLevel Level BP (battle-start card/commenced, battle-end ending sequence), make WBP_CutsceneScreen reusable, BGM fade on WorldFinished | ☐ Next |
+
+---
+
+## Block F — Gameplay Arc (after chapter loop)
+Goal: Make the combat actually good. Ordered by dependency — design before polish, polish before tutorial.
+
+| # | Topic | Notes |
+|---|---|---|
+| F1 | **Win-condition design** (PRIORITY) | How does Nameless win with no direct damage? Decide: damage-dealing ally vs. Enrage/self-destruction. Verify the fight is actually winnable. Core design, must come before any polish. |
+| F2 | Battle UI clarity | Miss reasons, ability effect feedback, turn-logic readability. Clarity before flash. |
+| F3 | Dice-roll animation | Visualize the d20 roll + modifier vs DC. |
+| F4 | Ability VFX | Embolden / Intimidate / Provoke visual effects, damage numbers. |
+| F5 | Onboarding / tutorial | LAST — never build a tutorial until mechanics are final. |
 
 ---
 
 ## Phase 1 Complete Flow
-Menu → Intro Slides → Battle → Ending Slides → Chapter Complete → Chapter 2 Title → Intro Slides → Battle
+Menu → Intro Slides → Battle → Ending Slides → World Finished → Chapter 2 Title → Intro Slides → (Chapter 2 battle = Phase 2)
 
 **Chapter names:**
 - Chapter 1: A Novel Origin
