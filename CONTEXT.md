@@ -26,6 +26,30 @@ Main menu and intro cutscene:
 - Widgets: WBP_ChapterCard (DarkOverlay + ChapterText + LogoImage, ChapterCardAnim slam+fade), WBP_BattleCommenced (CommencedImage, CommencedAnim punchy slam), WBP_WorldFinished (black bg + WorldText "WORLD 1 . . ." + red FinishedText "FINISHED" bottom-right, WorldFinishedAnim slow eerie fade).
 - DESIGN_RATIONALE.md added at repo root (decision/why/rejected format).
 
+### TestLevel Level Blueprint map (current — the integration target)
+**Event BeginPlay (one synchronous chain, in order):**
+1. Set View Target with Blend → `CameraActor` (via Get Player Controller).
+2. Construct Turn Manager → SET `Turn Manager` var.
+3. Add Combatant ×3 — BP_Player, BP_Enemy, BP_Boss.
+4. Setup Combat (BP_Player) [In Turn Manager, In Target] → Add Target ×2 to player (BP_Enemy, BP_Boss) → Setup Combat (BP_Enemy) + Setup Combat (BP_Boss) [In Turn Manager, In Player Target].
+5. Create WBP_BattleHUD → SET `HUD`; set HUD's Player/Enemy/Boss Character + Turn Manager refs → Add to Viewport → **SET HUD Visibility = Hidden**.
+6. Create WBP_DialogueBox → Add to Viewport → SET `Dialogue Box Widget`.
+7. Bind OnLineShown + OnDialogueFinished (Dialogue Component on BP_Player).
+8. **Start Dialogue** (pre-battle, "The Narrator") → **Start Combat** (Turn Manager) → **Refresh Strip** (Turn Order Strip via GetTurnOrder).
+9. Create WBP_CommandMenu → SET `Command Menu` → Setup Command Menu [In Player Character = BP_Player] → Add to Viewport.
+10. Bind OnCombatEnded (Turn Manager) → `OnCombatEnded_Event`.
+
+**Custom events:**
+- `OnDialogueStarted(SpeakerName, LineText)` → Show Line on Dialogue Box.
+- `OnDialogueFinished` → Hide Dialogue → Sequence(Then0/1/2) → set HUD Visibility = Visible, Command Menu Visibility = Visible.
+- `OnCombatEnded_Event(Player Won)` → Branch → True: Print "Player Won!"; False: Print "Game Over…". **(These Prints are the placeholders to replace.)**
+
+**Level BP vars:** `Turn Manager`, `HUD`, `Dialogue Box Widget`, `Command Menu`.
+
+**Integration seams for next session:**
+- **Battle start:** play WBP_ChapterCard FIRST (over the greyed, idle battlefield) before Start Dialogue. Play WBP_BattleCommenced AFTER `OnDialogueFinished`, right before combat actually begins. PROBLEM: Start Dialogue → Start Combat are currently chained synchronously, so combat would begin during dialogue/card. FIX: pull `Start Combat` out of the BeginPlay chain and call it from a delayed point after BattleCommenced finishes (HUD/Command Menu reveal already waits on OnDialogueFinished, so that part is fine). No engine pause needed — characters just idle until Start Combat.
+- **Battle end:** in `OnCombatEnded_Event`, replace the True-branch Print with the ending sequence → ending slides (reuse a configurable WBP_CutsceneScreen) → WBP_WorldFinished (fade out the persistent GameInstance BGM here for silence) → Chapter 2 card → Chapter 2 opening slide.
+
 ## Key Notes
 - Don't paste large error logs in chat — first 5-10 lines is enough to diagnose
 - Hot reload errors always clear on full UE5 restart
