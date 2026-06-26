@@ -9,6 +9,8 @@
 #include "TurnManager/UTurnManager.h"
 #include "APlayerCharacter.generated.h"
 
+class UDialogueComponent;
+
 UCLASS()
 class ANAMELESSWORLD_API APlayerCharacter : public ABaseCharacter
 {
@@ -54,6 +56,12 @@ public:
     // Adds a single target to the AllTargets array.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void AddTarget(ABaseCharacter* NewTarget);
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ANW|Components")
+    UDialogueComponent* DialogueComp;
+
+    UFUNCTION(BlueprintCallable, Category = "ANW|Dialogue")
+    void AdvanceDialogue();
 
     // All possible targets — set by Level Blueprint after combat starts.
     UPROPERTY(BlueprintReadWrite, Category = "ANW|Combat")

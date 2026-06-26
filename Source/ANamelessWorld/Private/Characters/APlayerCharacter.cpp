@@ -3,13 +3,14 @@
 #include "Characters/APlayerCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Dialogue/UDialogueComponent.h"
 #include "GameplayTagsModule.h"
 #include "TurnManager/UTurnManager.h"
 #include "TimerManager.h"
 
 APlayerCharacter::APlayerCharacter()
 {
-    // Input is handled by SetupPlayerInputComponent — nothing to do here.
+    DialogueComp = CreateDefaultSubobject<UDialogueComponent>(TEXT("Dialogue"));
 }
 
 void APlayerCharacter::BeginPlay()
@@ -22,6 +23,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     Super::SetupPlayerInputComponent(PlayerInputComponent);
     PlayerInputComponent->BindAction(
         "Attack", IE_Pressed, this, &APlayerCharacter::OnAttackPressed);
+
+    PlayerInputComponent->BindAction(
+        "AdvanceDialogue", IE_Pressed, this, &APlayerCharacter::AdvanceDialogue);
 }
 
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)
@@ -64,7 +68,20 @@ void APlayerCharacter::EndTurnNow()
 
 void APlayerCharacter::OnAttackPressed()
 {
+    if (DialogueComp && DialogueComp->IsDialogueActive())
+    {
+        AdvanceDialogue();
+        return;
+    }
+
     FireAbility(FName("Ability.Attack.Basic"));
+}
+
+void APlayerCharacter::AdvanceDialogue()
+{
+    if (!DialogueComp || !DialogueComp->IsDialogueActive()) return;
+
+    DialogueComp->AdvanceLine();
 }
 
 void APlayerCharacter::UseEmbolden()

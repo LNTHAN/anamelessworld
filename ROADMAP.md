@@ -56,52 +56,47 @@ Goal: Story wraps around the battle
 
 ---
 
-## Block D — Menu + Audio (Sessions 20–21)
+## Block D — Menu + Audio (Sessions 20–21) ✓ COMPLETE
 Goal: Game has a proper start and music
 
+| # | Topic | Status |
+|---|---|---|
+| 20 | Main menu, intro cutscene (6 slides), BGM via GameInstance | ✓ Done |
+| 21 | (merged into Session 20) | ✓ Done |
+
+---
+
+## Block E — Ending Sequence (Sessions 22–23)
+Goal: Chapter 1 ends, Chapter 2 begins
+
 | # | Topic |
 |---|---|
-| 20 | Main menu — Start Game button, transitions to story slideshow |
-| 21 | BGM — 1 track starts at menu, persists through slideshow and battle, stops at end |
+| 22 | Ending slides → Chapter 1 Complete screen → Chapter 2: Here comes the Action title card → Beginning slides → Battle |
+| 23 | Polish — slide text display, ability VFX, damage numbers, Battle UI, Dialogue UI |
 
 ---
 
-## Block E — Ending Sequence (Sessions 22–24)
-Goal: Battle ends with a proper cinematic finish
+## Phase 1 Complete Flow
+Menu → Intro Slides → Battle → Ending Slides → Chapter Complete → Chapter 2 Title → Intro Slides → Battle
 
-| # | Topic |
-|---|---|
-| 22 | Chapter complete screen — fade to black after post-battle dialogue |
-| 23 | "To Be Continued..." screen — final card, then loop to menu |
-| 24 | Buffer — polish, bugfix, full playthrough pass |
+**Chapter names:**
+- Chapter 1: A Novel Origin
+- Chapter 2: Here Comes the Action
 
----
-
-## Total
-- Sessions done: 11
-- Sessions remaining: ~13
-- At 2 sessions/day: **~7 days**
-- Realistic (some sessions expand): **8–9 days**
+**Deadline: End of July 2026**
 
 ---
 
-## Revised Calendar (from Jun 08)
-| Day | Date | Session A | Session B |
-|---|---|---|---|
-| 1 | Jun 08 | 12 — Protagonist real kit (Lift Up, Silence, Provoke) | 13 — d20 dice system |
-| 2 | Jun 09 | 14 — Character models + animations (Mixamo) | 15 — Turn order indicator UI |
-| 3 | Jun 10 | 16 — Dialogue system | 17 — Pre-battle dialogue |
-| 4 | Jun 11 | 18 — Post-battle dialogue | 19 — Story slideshow |
-| 5 | Jun 12 | 20 — Main menu | 21 — BGM |
-| 6 | Jun 13 | 22 — Chapter complete screen | 23 — "To Be Continued..." screen |
-| 7 | Jun 14 | 24 — Polish + full playthrough pass | Buffer |
-
-**Target completion: ~2026-06-14**
-Hard deadline with buffer: **2026-06-19**
+## Phase 2 Plan
+- Free movement on field (BG3-style, radius-based, not tile-based)
+- Environmental effects
+- Dialogue choices + branching paths
+- New characters + new abilities
+- Multiple battles per chapter
 
 ---
 
 ## Asset Plan
 - **Character models + animations:** Mixamo (free) — import FBX into UE5, retarget to UE5 mannequin skeleton
-- **BGM:** Free/royalty-free track (itch.io or freemusicarchive.org)
-- **UI art:** Placeholder colored panels for MVP; replace post-deadline if desired
+- **BGM:** Suno AI generated, modern fantasy cinematic, per-chapter tracks that get lighter as protagonist changes
+- **UI art:** Custom AI-generated assets (button, logo, background)
