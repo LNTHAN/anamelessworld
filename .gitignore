@@ -3,3 +3,9 @@ DerivedDataCache/
 Intermediate/
 Saved/
 Build/
+
+# Claude / AI tooling — local only, not part of the game repo
+.claude/
+CLAUDE.md
+AGENTS.md
+memory/
