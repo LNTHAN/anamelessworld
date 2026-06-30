@@ -138,3 +138,22 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 **Decision:** Nameless's movement is roughly equal to enemies' (at most slightly higher). He survives via abilities + terrain + action economy (Move *or* Act tradeoffs), not by outrunning anyone.
 **Why:** If the manipulator could simply kite faster than everyone, there'd be no lose condition. Tying survival to *control* (confuse a chaser so it turns on a neighbor, fear to make space, interact to wall a lane) keeps real risk and makes positioning the skill. The status-immune boss is the unkitable threat that punishes passive play.
 **Rejected:** Give Nameless dominant movement speed — removes the failure state and trivializes the fight.
+
+---
+
+## 7. Controls & Input
+
+### Modal Left-Click (Idle = move, armed ability = target)
+**Decision:** Left-click is context-sensitive. In **Idle** mode it moves the character; once an ability is **armed** (via command menu or hotkey) left-click confirms that ability's target, and RMB/Esc cancels back to Idle.
+**Why:** One ability deals with one target type, but the player has several abilities plus movement — overloading them onto distinct buttons gets clunky fast. The mode model (XCOM/BG3 standard) keeps a single intuitive "click to do the obvious thing" while supporting many abilities. It also gives movement and abilities a shared gate ("only act when it's your turn / in the right mode").
+**Rejected:** Fixed per-button mapping (LMB always move, RMB always target) — doesn't scale past one targeted ability and feels unintuitive.
+
+### Ability selection: command-menu clicks + number hotkeys
+**Decision:** Abilities can be armed by clicking the on-screen command menu *or* by pressing 1/2/3(/4). Both routes set the same pending-ability state.
+**Why:** Menu clicks are discoverable for new players; hotkeys are faster for experienced ones. Low cost to support both.
+**Rejected:** Hotkeys only (undiscoverable) or menu only (slow).
+
+### Full tactical camera built now, not deferred to polish
+**Decision:** Build rotate / zoom / pan camera control as part of the movement work (Block G), not later in the clarity/polish block.
+**Why:** Positioning is the core of the game; you can't evaluate movement, ranges, or herding without freely inspecting the battlefield. Testing the movement system honestly *requires* the camera, so it belongs alongside it.
+**Rejected:** Fixed camera now, tactical camera later — would make every movement/balance playtest misleading.

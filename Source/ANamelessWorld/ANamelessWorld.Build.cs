@@ -18,7 +18,9 @@ public class ANamelessWorld : ModuleRules
 			"GameplayAbilities",
 			"GameplayTasks",
 			"GameplayTags",
-			"UMG"
+			"UMG",
+			"AIModule",
+			"NavigationSystem"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

@@ -7,6 +7,8 @@
 #include "GameplayTagsModule.h"
 #include "TurnManager/UTurnManager.h"
 #include "TimerManager.h"
+#include "Blueprint/AIBlueprintHelperLibrary.h"
+#include "GameFramework/PlayerController.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -16,6 +18,15 @@ APlayerCharacter::APlayerCharacter()
 void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    // Show the cursor and enable click hit-testing so the player can click
+    // the battlefield to move (tactical top-down control).
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        PC->bShowMouseCursor = true;
+        PC->bEnableClickEvents = true;
+        PC->bEnableMouseOverEvents = true;
+    }
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -26,6 +37,24 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     PlayerInputComponent->BindAction(
         "AdvanceDialogue", IE_Pressed, this, &APlayerCharacter::AdvanceDialogue);
+
+    PlayerInputComponent->BindAction(
+        "MoveClick", IE_Pressed, this, &APlayerCharacter::OnMoveClicked);
+}
+
+void APlayerCharacter::OnMoveClicked()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC) return;
+
+    // Find what's under the mouse cursor on the Visibility channel.
+    FHitResult Hit;
+    if (PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+    {
+        // Path this character to the clicked floor point, around obstacles,
+        // using the NavMesh. (Step 3 will reject clicks outside move range.)
+        UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, Hit.Location);
+    }
 }
 
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)

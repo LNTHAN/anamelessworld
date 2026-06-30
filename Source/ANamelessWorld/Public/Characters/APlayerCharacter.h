@@ -31,6 +31,11 @@ public:
     // Fires the Ability.Attack.Basic event targeting the first living enemy.
     void OnAttackPressed();
 
+    // Called when the player left-clicks the battlefield. Traces under the
+    // cursor and paths this character to the clicked floor location.
+    // (Step 3 will constrain this to a movement radius.)
+    void OnMoveClicked();
+
     // Called from the Level Blueprint to wire up combat references.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget);
