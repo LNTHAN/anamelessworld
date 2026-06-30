@@ -1,111 +1,74 @@
-# ANamelessWorld — Phase 1 Roadmap
-# Goal: Complete First Battle (Final Fantasy Tactics style)
+# A Nameless World — Roadmap
 
-## Flow
-Menu → Story Slideshow → Pre-battle Dialogue → Battle → Post-battle Dialogue → Chapter Complete → To Be Continued
+## Philosophy: Depth-first
+**Phase 1 = build World 1 / Chapter 1 to near-final quality** — real movement, environment, the full manipulation kit, balanced and *fun*. **Phase 2 = breadth** — more worlds, abilities, companions. Building one chapter end-to-end exercises every system we'll reuse and avoids throwaway prototypes.
+
+## Flow (Chapter 1)
+Menu → Intro Slides → Chapter Card → Pre-battle Dialogue → Battle Commenced → **Tactical Battle** → Ending Slides → World Finished → Chapter 2 Teaser
 
 ---
 
-## Sessions Completed
+## Sessions Completed (1–22)
 | # | Topic | Status |
 |---|---|---|
-| 1 | UCRPGAttributeSet (Health, Mana, D&D stats) | ✓ |
-| 2 | ABaseCharacter + AbilitySystemComponent | ✓ |
-| 3 | UInventoryComponent | ✓ |
-| 4 | UTurnManager | ✓ |
-| 5 | GA_BasicAttack C++ | ✓ |
-| 6 | GE_DamageInstant + end-to-end damage test | ✓ |
-| 7 | APlayerCharacter + AEnemyCharacter subclasses, key-bound attack, UTurnManager wiring | ✓ |
-| 8 | Win/lose detection, WBP_BattleHUD with health bars and turn indicator | ✓ |
-| 9 | Enemy AI (auto-select move + target), ABossCharacter | ✓ |
-| 10 | Command menu, Cycle Target, Boss HP bar | ✓ |
-| 11 | Data Assets — UCRPGCharacterData, per-character DA assignments | ✓ |
+| 1–6 | AttributeSet, ABaseCharacter+ASC, Inventory, TurnManager, GA_BasicAttack, end-to-end damage | ✓ |
+| 7–10 | Player/Enemy subclasses, win/lose + HUD, enemy AI + Boss, command menu + cycle target | ✓ |
+| 11 | Data Assets (UCRPGCharacterData, per-character DAs) | ✓ |
+| 12–13 | Protagonist kit (Embolden/Intimidate/Provoke), d20 dice system | ✓ |
+| 14–17 | Character models + anim wiring, battle log, turn-order strip, turn sequencing fix | ✓ |
+| 18–19 | Dialogue system + FFT-style styling | ✓ |
+| 20 | Main menu, intro cutscene, BGM via GameInstance | ✓ |
+| 22 | Chapter-loop assets + screen widgets, Cinzel font, reusable cutscene widget, battle-start wiring | ✓ |
+
+> Note: the original Phase-1 "complete a basic first battle" goal is superseded by the depth-first plan below. Sessions 1–22 built the foundation; the combat is now being redesigned around tactical movement + manipulation (see DESIGN_RATIONALE §6).
 
 ---
 
-## Block A — Battle System Core (Sessions 12–14)
-Goal: Protagonist's real combat identity, d20 resolution, and character animations
+## Phase 1 — World 1 / Chapter 1 (to near-final quality)
 
-| # | Topic |
-|---|---|
-| 12 | Protagonist's real kit — Lift Up (buff), Silence (debuff/stun), Provoke (enrage/redirect) |
-| 13 | d20 dice system — roll + modifier vs DC, Advantage/Disadvantage, Natural 20/1 |
-| 14 | Character models + animations — Mixamo free assets, attack/hurt/death state machine |
+### Block G — Movement foundation
+Radius-based (BG3-style) free movement. **Action economy = Move + one Action per turn** (separate stocks, any order, skippable). Movement-range preview. Turn-manager integration. Enemy movement. *The biggest new system — several sessions.*
 
----
+### Block H — Manipulation kit (final Chapter 1 design)
+- Retire Nameless's direct damage (remove Basic / Heavy Strike).
+- **Confuse** (rework Provoke): target attacks the **nearest creature** (incl. boss); damage-buff + low accuracy (Disadvantage).
+- **Intimidate** (rework): **displacement + AoE fear** — control/repositioning, not a second disable.
+- Command menu → **Move / Confuse / Intimidate / Interact**.
+- Embolden deferred to Chapter 2.
 
-## Block B — Battle UI (Sessions 15–16)
-Goal: Player can see what's happening and what's coming
+### Block I — Environment & Interact
+Interactable-object framework + **Interact** command. Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE). A second damage source able to hit the status-immune boss.
 
-| # | Topic |
-|---|---|
-| 15 | Battle log — in-game text feed showing damage, misses, stuns, self-damage per action |
-| 16 | Turn order indicator — UI strip showing upcoming turn order (like FF Tactics) |
+### Block J — AI, boss & encounter
+Tactical enemy AI (move-to-target, confused targeting, boss pursuit). **Boss = fast/ranged, immune to status** — the unkitable clock. Encounter layout, mob count, and the balance pass → tight, winnable, fun.
 
----
+### Block K — Clarity & feedback (the "fun" polish)
+Movement-range & ability-range/AoE indicators, threat telegraphs, status icons, hit/miss/damage feedback, dice-roll visualization, ability VFX, confusion + bookshelf-crash visuals.
 
-## Block C — Dialogue + Story (Sessions 16–19)
-Goal: Story wraps around the battle
+### Block L — Cinematic chapter loop
+Chapter card + Battle Commenced (done). Ending slides → World Finished → Chapter 2 teaser, reusing the configurable cutscene widget.
 
-| # | Topic |
-|---|---|
-| 16 | Dialogue system — text box, character name, advance on input |
-| 17 | Pre-battle dialogue — conversation triggers when battle field loads |
-| 18 | Post-battle dialogue — triggers when all enemies die |
-| 19 | Story slideshow — opening sequence (the girl scene, Visual Novel world dies) |
+### Block M — Onboarding
+Teach the manipulation loop. **Last** — only once mechanics are frozen.
 
 ---
 
-## Block D — Menu + Audio (Sessions 20–21) ✓ COMPLETE
-Goal: Game has a proper start and music
-
-| # | Topic | Status |
-|---|---|---|
-| 20 | Main menu, intro cutscene (6 slides), BGM via GameInstance | ✓ Done |
-| 21 | (merged into Session 20) | ✓ Done |
-
----
-
-## Block E — Chapter Loop (Session 22)
-Goal: Chapter 1 ends, Chapter 2 begins — full cinematic loop
-
-| # | Topic | Status |
-|---|---|---|
-| 22 (pt 1) | Assets + screen widgets (ChapterCard, BattleCommenced, WorldFinished), Cinzel font, DESIGN_RATIONALE.md | ✓ Done |
-| 22 (pt 2) | Integration: wire chapter loop into TestLevel Level BP (battle-start card/commenced, battle-end ending sequence), make WBP_CutsceneScreen reusable, BGM fade on WorldFinished | ☐ Next |
-
----
-
-## Block F — Gameplay Arc (after chapter loop)
-Goal: Make the combat actually good. Ordered by dependency — design before polish, polish before tutorial.
-
-| # | Topic | Notes |
-|---|---|---|
-| F1 | **Win-condition design** (PRIORITY) | How does Nameless win with no direct damage? Decide: damage-dealing ally vs. Enrage/self-destruction. Verify the fight is actually winnable. Core design, must come before any polish. |
-| F2 | Battle UI clarity | Miss reasons, ability effect feedback, turn-logic readability. Clarity before flash. |
-| F3 | Dice-roll animation | Visualize the d20 roll + modifier vs DC. |
-| F4 | Ability VFX | Embolden / Intimidate / Provoke visual effects, damage numbers. |
-| F5 | Onboarding / tutorial | LAST — never build a tutorial until mechanics are final. |
-
----
-
-## Phase 1 Complete Flow
-Menu → Intro Slides → Battle → Ending Slides → World Finished → Chapter 2 Title → Intro Slides → (Chapter 2 battle = Phase 2)
-
-**Chapter names:**
-- Chapter 1: A Novel Origin
-- Chapter 2: Here Comes the Action
-
-**Deadline: End of July 2026**
-
----
-
-## Phase 2 Plan
-- Free movement on field (BG3-style, radius-based, not tile-based)
-- Environmental effects
-- Dialogue choices + branching paths
-- New characters + new abilities
+## Phase 2 — Breadth
+- More worlds (each with signature interactables, hazards, and palette)
+- New abilities; **companions with unique kits** (Embolden returns here)
+- Branching dialogue + choices
 - Multiple battles per chapter
+
+---
+
+## Locked Combat Design (see DESIGN_RATIONALE §6)
+- Nameless = **pure manipulation**, zero direct damage
+- **Confuse** (nearest-creature, dmg-buff + low accuracy) replaces Provoke
+- **Boss immune to status** → killed via confused mobs + environment, never directly
+- **Intimidate** = displacement / AoE control
+- **Embolden** → Chapter 2 (needs a companion)
+- **Interact** = core verb (Ch1 = bookshelves)
+- **Movement** ≈ equal; safety from control + terrain + action economy, never raw speed
 
 ---
 

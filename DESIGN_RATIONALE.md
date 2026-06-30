@@ -78,12 +78,17 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 
 ---
 
-## 5. Systems Direction (Planned — Phase 2)
+## 5. Systems Direction (Phase 1 — Chapter 1)
 
-### Movement built before designing Chapter 2's battle
-**Decision:** Implement BG3-style free (radius-based) movement before authoring the Chapter 2 fight.
-**Why:** Designing the battle *around* movement from the start avoids painful retrofitting later.
-**Rejected:** Ship Chapter 2's battle first, add movement after — would require redesigning encounters.
+### Depth-first: build Chapter 1 to near-final quality before adding breadth
+**Decision:** Phase 1 = one complete, polished, *fun* tactical chapter (movement + environment + the full manipulation kit + balance). Phase 2 = breadth (more worlds, abilities, companions).
+**Why:** Building one chapter end-to-end exercises every system we'll reuse, and proves the combat is actually fun before we multiply content. Avoids the throwaway work of an abstract prototype that gets redesigned once movement lands.
+**Rejected:** Ship a basic no-movement "first battle" for Phase 1 and add tactics later — creates rework, and we aren't time-constrained enough to justify it.
+
+### Movement built before designing the Chapter 1 battle
+**Decision:** Implement BG3-style free (radius-based) movement as the foundation of the Chapter 1 fight, not a later add-on.
+**Why:** The manipulation kit (positioning who the "nearest creature" is, kiting, herding into hazards) only works on a real battlefield. Designing the battle *around* movement from the start avoids painful retrofitting.
+**Rejected:** Author the battle on static positions first, add movement after — would require redesigning the encounter and the abilities.
 
 ### Terrain and elevation that create tradeoffs, not decoration
 **Decision:** Woods slow movement but grant dodge chance; elevation gates melee beyond a height threshold. Movement and Action are separate "stocks" per turn, usable in any order or skipped.
@@ -94,3 +99,42 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 **Decision:** Initiative (Dex + d20) sets turn order; Speed (flat stat) sets movement range. They are different stats.
 **Why:** Avoids the Fire-Emblem problem where one Speed stat dominates everything. Keeps turn order and mobility as independent design levers.
 **Rejected:** A single Speed stat governing both order and movement — too swingy/overpowered.
+
+---
+
+## 6. Combat Design — Nameless's Manipulation Kit
+
+### Nameless deals zero direct damage — he is a pure manipulator
+**Decision:** Remove Basic Attack / Heavy Strike. Nameless wins *only* by turning the world's "heroes" against each other and against the environment.
+**Why:** It's the mechanical expression of his entire identity — a scholar who unmakes stories, not a fighter. A weak fallback attack would muddy the fantasy and let players ignore the real puzzle.
+**Rejected:** Keep a chip-damage attack as a safety net — undercuts the identity and the design tension.
+
+### Confuse (reworked Provoke), not classic taunt
+**Decision:** The control ability makes a target attack the **nearest creature** (ally, boss, anyone) with a **damage buff but low accuracy** (Disadvantage). This is Confusion, not Provoke (which would force attacks onto the caster).
+**Why:** Confusion is what turns enemies into Nameless's weapons. The damage-up / accuracy-down combo makes confused enemies reckless and dangerous but unreliable — a tool you aim, not a guarantee.
+**Rejected:** Classic Provoke (force them to attack Nameless) — pulls aggro *onto* the fragile manipulator, the opposite of what we want.
+
+### The boss is immune to status effects — and that's the encounter's spine
+**Decision:** The boss cannot be Confused, Feared, or otherwise disabled. It can only be *damaged* — by confused mobs and environmental hazards, never by Nameless directly.
+**Why:** Immunity (a) kills the degenerate "disable everything" strategy, (b) makes the boss an unkitable **clock** that forces urgency, and (c) reframes the win condition: you defeat the untouchable boss by aiming his own minions and his own world at him. The problem *is* the design.
+**Rejected:** A boss that can be Confused — trivializes the fight and removes all pressure.
+
+### Intimidate = displacement / AoE control, not a second disable
+**Decision:** Re-theme Intimidate from "stun one mob" to **forced displacement + AoE fear** (scatter enemies away from Nameless).
+**Why:** As a single-target disable it was redundant with Confuse, so players would always pick the stronger one. As displacement it owns a different job — survival, repositioning, and herding enemies into hazards (e.g. under a rigged bookshelf).
+**Rejected:** Keep both as single-target disables — redundant, one strictly dominates.
+
+### Embolden deferred to Chapter 2
+**Decision:** Cut the ally-buff (Embolden/Advantage) from Chapter 1; reintroduce it when Nameless gains his first **companion** in Chapter 2.
+**Why:** A buff with no ally to target is dead weight in a solo chapter. Holding it back also gives Chapter 2 a fresh mechanical "new toy" — good progression.
+**Rejected:** Repurpose Embolden onto enemies in Ch1 — confusing semantics, and it competes with the cleaner kit.
+
+### Interact — manipulating the world is a core verb
+**Decision:** Add an **Interact** command that arms/triggers environmental objects, each with a unique effect per world. Chapter 1 = **rigged bookshelves** (arm one; it crushes enemies caught in its AoE).
+**Why:** A manipulator who weaponizes the *world itself* is deeply on-theme (and the bookshelf is perfect VN-world flavor). It's also a second damage source that can reach the status-immune boss.
+**Rejected:** Combat with no environmental interaction — wastes the manipulator fantasy and leaves the boss with too few counters.
+
+### Movement ≈ equal — safety comes from control, never speed
+**Decision:** Nameless's movement is roughly equal to enemies' (at most slightly higher). He survives via abilities + terrain + action economy (Move *or* Act tradeoffs), not by outrunning anyone.
+**Why:** If the manipulator could simply kite faster than everyone, there'd be no lose condition. Tying survival to *control* (confuse a chaser so it turns on a neighbor, fear to make space, interact to wall a lane) keeps real risk and makes positioning the skill. The status-immune boss is the unkitable threat that punishes passive play.
+**Rejected:** Give Nameless dominant movement speed — removes the failure state and trivializes the fight.
