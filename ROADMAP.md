@@ -39,6 +39,9 @@ Radius-based (BG3-style) free movement. **Action economy = Move + one Action per
 ### Block I — Environment & Interact
 Interactable-object framework + **Interact** command. Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE). A second damage source able to hit the status-immune boss.
 
+### Block I2 — Data architecture (spreadsheet-driven)
+Define `USTRUCT` row types; build **DataTables** (Characters, Abilities) imported from **CSV** (Excel/Sheets workflow). Migrate stats/MoveRange/cooldowns/ability params off Data Assets so balancing is CRUD-in-a-sheet. Lands **before** Block J so the balance pass uses it. *(See DESIGN_RATIONALE §8.)*
+
 ### Block J — AI, boss & encounter
 Tactical enemy AI (move-to-target, confused targeting, boss pursuit). **Boss = fast/ranged, immune to status** — the unkitable clock. Encounter layout, mob count, and the balance pass → tight, winnable, fun.
 

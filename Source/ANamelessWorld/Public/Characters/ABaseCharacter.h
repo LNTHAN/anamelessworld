@@ -126,6 +126,16 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
     void SetIsDead(bool bDead);
 
+
+    // ── Movement ─────────────────────────────────────────────────────────────
+    // How far this character may travel in ONE turn, in world units (cm),
+    // measured as path distance across the NavMesh — NOT straight-line.
+    // This is the tactical "Speed" stat: later it can be derived from an
+    // attribute; for now it's a per-character tunable in the editor.
+    // ~500 ≈ 5 metres. Both the player and enemies read this.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Movement")
+    float MoveRange = 500.f;
+
 protected:
 
     // ── GAS Core Components ──────────────────────────────────────────────────

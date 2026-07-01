@@ -9,6 +9,8 @@
 #include "TimerManager.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "GameFramework/PlayerController.h"
+#include "NavigationSystem.h"
+#include "NavigationPath.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -49,12 +51,39 @@ void APlayerCharacter::OnMoveClicked()
 
     // Find what's under the mouse cursor on the Visibility channel.
     FHitResult Hit;
-    if (PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+    if (!PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
     {
-        // Path this character to the clicked floor point, around obstacles,
-        // using the NavMesh. (Step 3 will reject clicks outside move range.)
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, Hit.Location);
+        return; // Clicked empty space (no floor hit) — ignore.
     }
+
+    // Ask the navigation system for the ACTUAL walking route from where we
+    // stand to the clicked point — routed around obstacles, not a straight line.
+    UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+    if (!NavSys) return;
+
+    UNavigationPath* Path = NavSys->FindPathToLocationSynchronously(
+        GetWorld(), GetActorLocation(), Hit.Location, this);
+
+    // Reject the move if: there's no path, it's invalid, or it's "partial"
+    // (the destination can't be fully reached — e.g. off the navmesh).
+    if (!Path || !Path->IsValid() || Path->IsPartial())
+    {
+        return;
+    }
+
+    // The key tactical rule: the route's length must be within this
+    // character's MoveRange. Path length is measured along the navmesh,
+    // so walls and detours count against the budget.
+    if (Path->GetPathLength() > MoveRange)
+    {
+        UE_LOG(LogTemp, Log,
+            TEXT("APlayerCharacter: click out of range (%.0f > %.0f)."),
+            Path->GetPathLength(), MoveRange);
+        return;
+    }
+
+    // In range — walk there.
+    UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, Hit.Location);
 }
 
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)

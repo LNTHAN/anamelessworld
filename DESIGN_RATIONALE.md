@@ -157,3 +157,22 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 **Decision:** Build rotate / zoom / pan camera control as part of the movement work (Block G), not later in the clarity/polish block.
 **Why:** Positioning is the core of the game; you can't evaluate movement, ranges, or herding without freely inspecting the battlefield. Testing the movement system honestly *requires* the camera, so it belongs alongside it.
 **Rejected:** Fixed camera now, tactical camera later — would make every movement/balance playtest misleading.
+
+---
+
+## 8. Data Architecture
+
+### Spreadsheet-driven stats via DataTables (CSV), not per-asset Data Assets
+**Decision:** Migrate character/ability/effect numbers (stats, MoveRange, cooldowns, ability params) into **DataTables** backed by `USTRUCT` row types and edited as **CSV** (Excel/Sheets → export → reimport). Keep the existing Data Asset approach only where a few complex hand-authored objects make sense. Set up the pipeline in a dedicated session *before* the balance pass (Block J).
+**Why:** Tactical balancing means touching lots of numbers repeatedly; a spreadsheet/CRUD workflow (standard in production — e.g. Nexon's Fantasy War Tactics R) lets designers tune without code or per-asset clicking, version-controls as text, and scales to Phase 2's content explosion. Cheaper to establish now (3 characters) than after content multiplies.
+**Rejected:** (a) One `UCRPGCharacterData` Data Asset per character forever — doesn't scale to bulk balancing. (b) Hardcoded magic numbers — the thing data-driven design exists to avoid. (c) Doing the migration in Phase 2 — more data to migrate, and it misses the Phase-1 balance pass where it's most useful.
+
+---
+
+## 9. Combat UX Conventions
+
+### Fire Emblem colour language: cyan = movement, red = attack/threat
+**Decision:** Movement range is shown in **cyan/blue**; ability/attack range and enemy threat range are shown in **red**. Same decal/zone tech, different colour.
+**Why:** It's an established tactical convention (Fire Emblem: Three Houses, etc.) players already parse instantly — cyan "where I can go," red "where danger is." Free readability by matching genre expectation.
+**Rejected:** A bespoke colour scheme — no upside, and it fights players' existing mental model.
+**Note:** Our field is radius-based (not tiles), so these read as circular *zones* rather than tinted squares — same intent, different shape. Full visual polish of these indicators (flat-fill zones, edges, telegraphs) is Block K work, not now.
