@@ -39,41 +39,27 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     PlayerInputComponent->BindAction(
         "AdvanceDialogue", IE_Pressed, this, &APlayerCharacter::AdvanceDialogue);
-
-    PlayerInputComponent->BindAction(
-        "MoveClick", IE_Pressed, this, &APlayerCharacter::OnMoveClicked);
 }
 
-void APlayerCharacter::OnMoveClicked()
+void APlayerCharacter::TryMoveTo(const FVector& Destination)
 {
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (!PC) return;
-
-    // Find what's under the mouse cursor on the Visibility channel.
-    FHitResult Hit;
-    if (!PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
-    {
-        return; // Clicked empty space (no floor hit) — ignore.
-    }
-
     // Ask the navigation system for the ACTUAL walking route from where we
-    // stand to the clicked point — routed around obstacles, not a straight line.
+    // stand to the target spot — routed around obstacles, not a straight line.
     UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
     if (!NavSys) return;
 
     UNavigationPath* Path = NavSys->FindPathToLocationSynchronously(
-        GetWorld(), GetActorLocation(), Hit.Location, this);
+        GetWorld(), GetActorLocation(), Destination, this);
 
-    // Reject the move if: there's no path, it's invalid, or it's "partial"
-    // (the destination can't be fully reached — e.g. off the navmesh).
+    // Reject if: there's no path, it's invalid, or it's "partial" (the spot
+    // can't actually be reached — e.g. off the walkable floor).
     if (!Path || !Path->IsValid() || Path->IsPartial())
     {
         return;
     }
 
-    // The key tactical rule: the route's length must be within this
-    // character's MoveRange. Path length is measured along the navmesh,
-    // so walls and detours count against the budget.
+    // The tactical rule: route length must be within MoveRange. Length is
+    // measured along the floor, so walls and detours count against the budget.
     if (Path->GetPathLength() > MoveRange)
     {
         UE_LOG(LogTemp, Log,
@@ -82,8 +68,8 @@ void APlayerCharacter::OnMoveClicked()
         return;
     }
 
-    // In range — walk there.
-    UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, Hit.Location);
+    // In range — walk there, driven by this character's AIController.
+    UAIBlueprintHelperLibrary::SimpleMoveToLocation(GetController(), Destination);
 }
 
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)

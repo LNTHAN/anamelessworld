@@ -31,10 +31,9 @@ public:
     // Fires the Ability.Attack.Basic event targeting the first living enemy.
     void OnAttackPressed();
 
-    // Called when the player left-clicks the battlefield. Traces under the
-    // cursor and paths this character to the clicked floor location.
-    // (Step 3 will constrain this to a movement radius.)
-    void OnMoveClicked();
+    // Walk to a floor spot the controller already picked. Checks the move-range
+    // rule first (route length must fit inside MoveRange), then paths there.
+    void TryMoveTo(const FVector& Destination);
 
     // Called from the Level Blueprint to wire up combat references.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
