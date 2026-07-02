@@ -47,7 +47,7 @@ Idle ↔ armed-ability, all on `ATacticalPlayerController` (the "brain").
 - **1/2/3 hotkeys** — thin no-arg wrappers (`OnAbilityOnePressed` etc., legacy `BindAction` can't carry a payload) calling `ArmAbility` with the Embolden/Intimidate/Provoke tags.
 - **BP wiring:** `WBP_CommandMenu` gained a `TacticalController` variable, set via a new `In Tactical Controller` param on its `Setup Command Menu` function (fed by `Get Player Controller` → **Cast to Pure** `ATacticalPlayerController` in the Level BP, alongside the existing `In Player Character` wiring). All three ability buttons rewired from direct `Use Embolden/Intimidate/Provoke` calls to `Get TacticalController → Arm Ability`. **Cycle Target button removed** (grepped — `CurrentTarget` has no other reader; redundant now that clicking a target sets it directly via `FireAbilityAtTarget`). C++ `CycleTarget()`/`AllTargets`/`AddTarget` left in place, unused — not cleaned up yet, user's call whether/when.
 - **Bug found + fixed:** target-click traced on `ECC_Visibility`, same channel as `MoveClick` — but character capsules apparently **don't block Visibility** (likely intentional, so floor-clicks aren't obstructed by standing characters), so the trace always fell through to the floor underneath. Fixed by tracing armed clicks on **`ECC_Pawn`** instead (what `CharacterMovementComponent` already relies on for pawn-blocking) — floor clicks keep using `ECC_Visibility`.
-- **Bug found, NOT yet fixed:** the Intimidate button's `Arm Ability` node has a typo — `Ability.Support.Intimidate` (unregistered) instead of `Ability.Debuff.Intimidate` (the real tag, confirmed in `DefaultGameplayTags.ini`). Currently burns the player's Action for no effect. **Fix before next playtest.**
+- **Bug found + fixed:** Intimidate and Embolden buttons' `Arm Ability` nodes had crossed-prefix tag typos (`Ability.Support.Intimidate`, `Ability.Debuff.Embolden` — neither registered). Corrected to `Ability.Debuff.Intimidate` / `Ability.Support.Embolden` (confirmed against `DefaultGameplayTags.ini`). Both were silently burning the player's Action for no effect.
 - No UI feedback yet for "an ability is armed" (Block K polish item, not blocking).
 
 ## Camera spawn-drift bug — FIXED (unrelated, but a real gotcha)
@@ -72,8 +72,6 @@ and INT→MaxMana on level-up, MoveRange stays flat (equipment concern, Phase 2)
 needs a Mana cost assigned. Infra (`XP`, `CharacterLevel`, `Mana`, `MaxMana`, all 6 D&D stats)
 already exists on `UCRPGAttributeSet` since Session 1, unused — this is GameplayEffects/logic
 (GE_GainXP, LevelUp trigger, mana-cost commits), not new attributes.
-
-**First, before H2:** fix the Intimidate button tag typo (see above) — quick, not a real session.
 
 **Still pending from Block G** (queue after H2): enemy movement; (later polish) drive decal
 size from MoveRange + show only on player's turn; optional cleanup of dead input/cursor code
