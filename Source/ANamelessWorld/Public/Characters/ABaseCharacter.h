@@ -104,6 +104,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|State")
     bool IsAlive() const;
 
+    // True only for the human player's character. We can't use the engine's
+    // IsPlayerControlled() anymore — since the tactical-camera refactor, the
+    // PlayerController possesses the camera rig and Nameless is driven by an
+    // AIController, so the engine no longer sees him as "player controlled."
+    // This virtual is possession-proof: identity, not who's holding the strings.
+    UFUNCTION(BlueprintCallable, Category = "ANW|State")
+    virtual bool IsPlayerCharacter() const { return false; }
+
     // Returns the raw Dexterity score (e.g. 14.0).
     // UTurnManager uses this to calculate the initiative modifier for turn order.
     // Formula: modifier = floor((Dexterity - 10) / 2)
@@ -136,6 +144,21 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Movement")
     float MoveRange = 500.f;
 
+        // ── Action economy (per-turn stocks) ─────────────────────────────────────
+    // Each turn a combatant gets ONE move and ONE action, spent independently
+    // and in any order. Both refill when this combatant's turn begins.
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Turn")
+    bool bMoveAvailable = true;
+
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Turn")
+    bool bActionAvailable = true;
+
+    // Refill both stocks. The TurnManager calls this at the start of this
+    // combatant's turn.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Turn")
+    void ResetTurnResources();
+
+    
 protected:
 
     // ── GAS Core Components ──────────────────────────────────────────────────

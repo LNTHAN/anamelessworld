@@ -43,6 +43,19 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 void APlayerCharacter::TryMoveTo(const FVector& Destination)
 {
+    // Turn gate: only move on the player's turn.
+    if (!TurnManager || TurnManager->GetCurrentState() != ETurnState::PlayerTurn)
+    {
+        return;
+    }
+
+    // Action economy: only if the Move stock is still available this turn.
+    if (!bMoveAvailable)
+    {
+        UE_LOG(LogTemp, Log, TEXT("APlayerCharacter: no move left this turn."));
+        return;
+    }
+    
     // Ask the navigation system for the ACTUAL walking route from where we
     // stand to the target spot — routed around obstacles, not a straight line.
     UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
@@ -68,7 +81,8 @@ void APlayerCharacter::TryMoveTo(const FVector& Destination)
         return;
     }
 
-    // In range — walk there, driven by this character's AIController.
+    // In range — spend the Move stock, then walk there via the AIController.
+    bMoveAvailable = false;
     UAIBlueprintHelperLibrary::SimpleMoveToLocation(GetController(), Destination);
 }
 
@@ -84,25 +98,31 @@ void APlayerCharacter::FireAbility(const FName& TagName)
 {
     if (!TurnManager) return;
     if (TurnManager->GetCurrentState() != ETurnState::PlayerTurn) return;
+
+    // Action economy: only if the Action stock is still available this turn.
+    if (!bActionAvailable)
+    {
+        UE_LOG(LogTemp, Log, TEXT("APlayerCharacter: no action left this turn."));
+        return;
+    }
+
     if (!CurrentTarget || !CurrentTarget->IsAlive()) return;
+
+    // Spend the Action stock. The turn does NOT end here anymore — the player
+    // may still move (if unspent) and ends the turn explicitly.
+    bActionAvailable = false;
 
     FGameplayEventData Payload;
     Payload.Target = CurrentTarget;
 
     FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TagName);
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, Tag, Payload);
-
-    // End the player's turn after a delay so the animation has time to play.
-    // All player abilities go through FireAbility, so this covers every action.
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().SetTimer(TurnEndTimerHandle, this, &APlayerCharacter::EndTurnNow, 2.0f, false);
-    }
 }
 
-void APlayerCharacter::EndTurnNow()
+void APlayerCharacter::EndPlayerTurn()
 {
-    if (TurnManager)
+    // Only end our turn when it's actually our turn.
+    if (TurnManager && TurnManager->GetCurrentState() == ETurnState::PlayerTurn)
     {
         TurnManager->EndTurn();
     }

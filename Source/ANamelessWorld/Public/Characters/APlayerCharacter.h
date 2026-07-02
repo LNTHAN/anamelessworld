@@ -27,6 +27,9 @@ public:
     virtual void SetupPlayerInputComponent(
         UInputComponent* PlayerInputComponent) override;
 
+    // This IS the player's character.
+    virtual bool IsPlayerCharacter() const override { return true; }
+
     // Called when the player presses the attack key.
     // Fires the Ability.Attack.Basic event targeting the first living enemy.
     void OnAttackPressed();
@@ -61,6 +64,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void AddTarget(ABaseCharacter* NewTarget);
 
+    // Ends the player's turn — the explicit "I'm done" command the End Turn
+    // button calls. Allowed any time during the player's own turn (stocks
+    // are skippable), ignored otherwise.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void EndPlayerTurn();
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ANW|Components")
     UDialogueComponent* DialogueComp;
 
@@ -81,7 +90,4 @@ public:
 
 private:
     void FireAbility(const FName& TagName);
-
-    FTimerHandle TurnEndTimerHandle;
-    void EndTurnNow();
 };

@@ -211,6 +211,12 @@ bool ABaseCharacter::IsAlive() const
     return !bIsDead;
 }
 
+void ABaseCharacter::ResetTurnResources()
+{
+    bMoveAvailable = true;
+    bActionAvailable = true;
+}
+
 float ABaseCharacter::GetHealth() const
 {
     if (Attributes == nullptr) return 0.f;

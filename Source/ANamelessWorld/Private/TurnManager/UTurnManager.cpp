@@ -105,7 +105,7 @@ void UTurnManager::EndTurn()
         // Was it the player or the enemies who survived?
         bool bPlayerWon = Combatants.ContainsByPredicate([](const ABaseCharacter* C)
         {
-            return C && C->IsAlive() && C->IsPlayerControlled();
+            return C && C->IsAlive() && C->IsPlayerCharacter();
         });
 
         UE_LOG(LogTemp, Log, TEXT("UTurnManager: Combat over. Player won: %s"),
@@ -259,10 +259,13 @@ void UTurnManager::BeginTurn()
     ABaseCharacter* ActiveCharacter = Combatants[CurrentTurnIndex];
     if (ActiveCharacter == nullptr) return;
 
+    // Fresh turn → refill this combatant's Move + Action stocks.
+    ActiveCharacter->ResetTurnResources();
+
     // Determine whose turn it is.
     // APlayerCharacter will override a function we check here — for now we use
     // a simple tag check. IsPlayerControlled() returns true for the player pawn.
-    if (ActiveCharacter->IsPlayerControlled())
+    if (ActiveCharacter->IsPlayerCharacter())
     {
         CurrentState = ETurnState::PlayerTurn;
         UE_LOG(LogTemp, Log, TEXT("UTurnManager: PLAYER TURN — %s"), *ActiveCharacter->GetName());
@@ -303,9 +306,9 @@ bool UTurnManager::CheckCombatOver() const
     {
         if (Character == nullptr || !Character->IsAlive()) continue;
 
-        // IsPlayerControlled() tells us if this is the human player's character.
+        // IsPlayerCharacter() tells us if this is the human player's character.
         // Anything else is treated as an enemy for win/loss purposes.
-        if (Character->IsPlayerControlled())
+        if (Character->IsPlayerCharacter())
         {
             bPlayerAlive = true;
         }

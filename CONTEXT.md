@@ -23,8 +23,22 @@ Chose the **decoupled rig**: controller possesses the camera, commands Nameless 
 - **Gotcha (fixed):** TestLevel Level-BP `Set View Target with Blend`→old CameraActor was overriding the rig; **deleted that node**. A possessed pawn's camera shows automatically — no Set View Target needed.
 - **Input:** DefaultInput.ini AxisMappings CamPanForward(W/S) CamPanRight(D/A) CamRotate(E/Q) CamZoom(MouseWheelAxis).
 
+## Action economy + turn gating — DONE
+- **Stocks on `ABaseCharacter`:** `bMoveAvailable` + `bActionAvailable` (BlueprintReadOnly) + `ResetTurnResources()` (refills both). `UTurnManager::BeginTurn` calls `ResetTurnResources()` on the active combatant → everyone starts their turn full.
+- **Player gating/spend:** `TryMoveTo` refuses unless state==PlayerTurn AND `bMoveAvailable`; spends Move on a committed (in-range) walk only — rejected clicks cost nothing. `FireAbility` refuses unless PlayerTurn AND `bActionAvailable`; spends Action; **removed the old 2s auto-EndTurn timer** — abilities no longer end the turn.
+- **Explicit End Turn:** `APlayerCharacter::EndPlayerTurn()` (BlueprintCallable, guards on PlayerTurn) → `TurnManager->EndTurn()`. Wired to an **End Turn button** in WBP_CommandMenu (button reads the widget's `Player Character` variable, same pattern as the ability buttons). `EndTurnNow`/`TurnEndTimerHandle` removed.
+- **CRITICAL FIX (camera-refactor fallout):** `IsPlayerControlled()` broke as the player identity test — since the rig refactor, Nameless is AIController-possessed, so the engine no longer sees him as player-controlled. TurnManager was flagging him an enemy → instant "Game Over" + would mislabel his turn as EnemyTurn (blocking his own gates). Fixed with a **possession-proof** `virtual bool IsPlayerCharacter()` on ABaseCharacter (false) overridden in APlayerCharacter (true); replaced all 3 `IsPlayerControlled()` uses in UTurnManager.
+- **Enemy turn flow unchanged** (ExecuteAITurn via OnTurnStarted → 2s → EndTurn). Enemies inherit the stocks but don't use them yet (enemy-movement session).
+
+## Deferred idea — auto-end turn when both stocks spent
+Nice QoL (end the turn automatically once Move + Action are both used), but do it
+**with** the **move-completed callback**, not now: `SimpleMoveToLocation` is async, so a
+naive "both booleans false → EndTurn" cuts the walk/attack animation short. Build the
+"AIController reached destination" signal during **enemy movement** (the AI needs it too),
+then auto-end can wait for move-arrival + animation-finish. Until then End Turn is explicit.
+
 ## Next Task
-**Block G — remaining:** action economy (Move + Action budgets) + turn gating + the **modal-input state machine** (build it in `ATacticalPlayerController` — the brain is now the right home); enemy movement; (later polish) drive decal size from MoveRange + show only on player's turn; optional cleanup of dead input/cursor code in APlayerCharacter.
+**Block G — remaining:** the **modal-input state machine** (build it in `ATacticalPlayerController` — the brain is now the right home); enemy movement; (later polish) drive decal size from MoveRange + show only on player's turn; optional cleanup of dead input/cursor code in APlayerCharacter.
 
 ## Workflow (important)
 - Claude **writes** code as chat blocks and says exactly **what it does / which file / where**; the **USER applies it** to the game's C++/Blueprint source. NOT vibecoding. Claude may directly edit docs/config/git only.
@@ -50,3 +64,4 @@ Chose the **decoupled rig**: controller possesses the camera, commands Nameless 
 | 22 pt2 | Reusable cutscene widget; battle-start cinematic wired into TestLevel | ✓ |
 | 23 | Phase-1 depth-first redesign + manipulation combat design; controls/data/UX decisions; **Block G**: navmesh, click-to-move, movement radius + decal indicator | ◐ Block G in progress |
 | 24 | **Block G — tactical camera**: decoupled rig pawn + tactical PlayerController possesses it, commands Nameless via `TryMoveTo`; AI-driver possession; WASD/QE/wheel; removed old Set View Target | ◐ Block G in progress |
+| 25 | **Block G — action economy + turn gating**: Move/Action stocks on ABaseCharacter, refill in BeginTurn, gate+spend in TryMoveTo/FireAbility, explicit End Turn button; fixed IsPlayerControlled→IsPlayerCharacter (camera-refactor fallout) | ◐ Block G in progress |
