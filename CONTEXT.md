@@ -65,17 +65,30 @@ model to hook into, rather than retrofitting permanence later. **`TryMoveTo` sta
 it is today** — click = walk + spend `bMoveAvailable` immediately. No `TurnStartLocation` / no
 `ConfirmMove` / `CancelMove` on APlayerCharacter.
 
-## Next Task
-**Block H2 — Character progression (XP, leveling, Mana economy).** See ROADMAP.md for full
-scope: XP awarded per successful action, leveling can trigger **mid-battle**, CON→MaxHealth
-and INT→MaxMana on level-up, MoveRange stays flat (equipment concern, Phase 2), every ability
-needs a Mana cost assigned. Infra (`XP`, `CharacterLevel`, `Mana`, `MaxMana`, all 6 D&D stats)
-already exists on `UCRPGAttributeSet` since Session 1, unused — this is GameplayEffects/logic
-(GE_GainXP, LevelUp trigger, mana-cost commits), not new attributes.
+## Decision — Block H2 reordered to after I2, not right after H
+Drafted H2 (progression) as the session right after modal-input, then reconsidered before
+writing any code: `GA_Provoke`/`GA_Intimidate` are about to be reworked in Block H (Confuse,
+displacement), and only `GA_Intimidate` currently even has a real success/fail roll to hook
+XP into (`GA_Embolden`/`GA_Provoke` apply unconditionally — no roll exists yet). Wiring
+Mana-cost + XP-on-success onto abilities mid-rework is exactly the "throwaway prototype"
+pattern DESIGN_RATIONALE §5 warns against. **New order: H (kit rework) → I (Interact) → I2
+(DataTables) → H2 (progression, built data-driven from I2 instead of hardcoded per-ability
+GameplayEffect assets) → J.** ROADMAP.md updated to match.
 
-**Still pending from Block G** (queue after H2): enemy movement; (later polish) drive decal
-size from MoveRange + show only on player's turn; optional cleanup of dead input/cursor code
-in APlayerCharacter; optional cleanup of now-unused `CycleTarget()`/`AllTargets`/`AddTarget`.
+## Next Task
+**Block H — Manipulation kit (final Chapter 1 design).** See ROADMAP.md: retire Nameless's
+direct damage (remove Basic/Heavy Strike), rework Provoke → **Confuse** (nearest-creature
+targeting, damage-buff + low accuracy), rework Intimidate → **displacement + AoE fear**,
+command menu becomes Move/Confuse/Intimidate/Interact, defer Embolden to Chapter 2. Source of
+truth: DESIGN_RATIONALE §6.
+
+**Queued after H:** Block I (Environment & Interact) → I2 (data architecture) → **H2**
+(progression — XP/leveling/Mana, see decision above) → J (AI/boss/balance).
+
+**Still pending from Block G** (queue whenever convenient): enemy movement; (later polish)
+drive decal size from MoveRange + show only on player's turn; optional cleanup of dead
+input/cursor code in APlayerCharacter; optional cleanup of now-unused
+`CycleTarget()`/`AllTargets`/`AddTarget`.
 
 ## Workflow (important)
 - Claude **writes** code as chat blocks and says exactly **what it does / which file / where**; the **USER applies it** to the game's C++/Blueprint source. NOT vibecoding. Claude may directly edit docs/config/git only.
