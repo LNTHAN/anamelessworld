@@ -86,6 +86,12 @@ void APlayerCharacter::TryMoveTo(const FVector& Destination)
     UAIBlueprintHelperLibrary::SimpleMoveToLocation(GetController(), Destination);
 }
 
+void APlayerCharacter::FireAbilityAtTarget(const FName& TagName, ABaseCharacter* Target)
+{
+    CurrentTarget = Target;
+    FireAbility(TagName);
+}
+
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)
 {
     TurnManager = InTurnManager;

@@ -19,7 +19,7 @@ class ANAMELESSWORLD_API ATacticalCameraPawn : public APawn
 
 public:
     ATacticalCameraPawn();
-
+    
     virtual void SetupPlayerInputComponent(
         UInputComponent* PlayerInputComponent) override;
 

@@ -64,6 +64,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void AddTarget(ABaseCharacter* NewTarget);
 
+    // Fires an ability at an explicit target — called by the controller when a
+    // click lands on a valid target while an ability is armed. Reuses the same
+    // gating as every other ability call (PlayerTurn + Action stock) because it
+    // just sets CurrentTarget and calls the existing FireAbility().
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void FireAbilityAtTarget(const FName& TagName, ABaseCharacter* Target);
+
     // Ends the player's turn — the explicit "I'm done" command the End Turn
     // button calls. Allowed any time during the player's own turn (stocks
     // are skippable), ignored otherwise.

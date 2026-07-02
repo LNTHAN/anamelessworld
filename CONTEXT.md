@@ -37,8 +37,47 @@ naive "both booleans false → EndTurn" cuts the walk/attack animation short. Bu
 "AIController reached destination" signal during **enemy movement** (the AI needs it too),
 then auto-end can wait for move-arrival + animation-finish. Until then End Turn is explicit.
 
+## Modal-input state machine — DONE
+Idle ↔ armed-ability, all on `ATacticalPlayerController` (the "brain").
+- **`ArmedAbilityTag` (FName)** on the controller — `NAME_None` = Idle, else = Armed. No enum needed; this one field *is* the state machine.
+- **`ArmAbility(FName)`** (BlueprintCallable) — arms a tag, gated on PlayerTurn + `bActionAvailable` (fails fast, same gate `FireAbility` re-checks anyway).
+- **`OnMoveClicked`** now branches: Armed → cursor trace, `Cast<ABaseCharacter>` the hit, fire-and-clear on a hit, **stay armed on a miss** (armed clicks never fall through to movement). Idle → unchanged floor-click move.
+- **`OnCancelPressed`** (RMB + Esc) unconditionally clears `ArmedAbilityTag`.
+- **`APlayerCharacter::FireAbilityAtTarget(FName, ABaseCharacter*)`** — new public entry point; sets `CurrentTarget` then reuses the existing private `FireAbility` (same gating, no duplicated logic).
+- **1/2/3 hotkeys** — thin no-arg wrappers (`OnAbilityOnePressed` etc., legacy `BindAction` can't carry a payload) calling `ArmAbility` with the Embolden/Intimidate/Provoke tags.
+- **BP wiring:** `WBP_CommandMenu` gained a `TacticalController` variable, set via a new `In Tactical Controller` param on its `Setup Command Menu` function (fed by `Get Player Controller` → **Cast to Pure** `ATacticalPlayerController` in the Level BP, alongside the existing `In Player Character` wiring). All three ability buttons rewired from direct `Use Embolden/Intimidate/Provoke` calls to `Get TacticalController → Arm Ability`. **Cycle Target button removed** (grepped — `CurrentTarget` has no other reader; redundant now that clicking a target sets it directly via `FireAbilityAtTarget`). C++ `CycleTarget()`/`AllTargets`/`AddTarget` left in place, unused — not cleaned up yet, user's call whether/when.
+- **Bug found + fixed:** target-click traced on `ECC_Visibility`, same channel as `MoveClick` — but character capsules apparently **don't block Visibility** (likely intentional, so floor-clicks aren't obstructed by standing characters), so the trace always fell through to the floor underneath. Fixed by tracing armed clicks on **`ECC_Pawn`** instead (what `CharacterMovementComponent` already relies on for pawn-blocking) — floor clicks keep using `ECC_Visibility`.
+- **Bug found, NOT yet fixed:** the Intimidate button's `Arm Ability` node has a typo — `Ability.Support.Intimidate` (unregistered) instead of `Ability.Debuff.Intimidate` (the real tag, confirmed in `DefaultGameplayTags.ini`). Currently burns the player's Action for no effect. **Fix before next playtest.**
+- No UI feedback yet for "an ability is armed" (Block K polish item, not blocking).
+
+## Camera spawn-drift bug — FIXED (unrelated, but a real gotcha)
+Zoom appeared to creep further out on every Play→Stop cycle, even with zero input. Root cause: **`TestLevel` has no `PlayerStart`**, and Play mode is **Selected Viewport** — with no `PlayerStart`, GameMode falls back to spawning the pawn at the editor viewport's current camera transform, and Stop syncs the viewport back to wherever PIE ended → compounds every cycle in a single editor session (confirmed by the `FindPlayerStart: NO PLAYERSTART` line in the log). `SpringArm->TargetArmLength` itself was never wrong (verified always `1400`) — this was 100% a spawn-position issue, not a zoom-code bug. **Fix: added a `PlayerStart` to `TestLevel`.** Doesn't require changing Play mode. A `BeginPlay` override was briefly added to `ATacticalCameraPawn` chasing the wrong theory — reverted, not needed.
+
+## Decision — movement stays eager (no undo)
+Considered folding in tentative-move-with-undo (FFT/Fire Emblem model) alongside the modal
+state machine. **Rejected** — user wants to follow **Larian/BG3 philosophy**: movement is a
+real-time committed event, not a revertible preview. Reasoning: BG3 keeps movement permanent
+because things react *mid-walk* (opportunity attacks, trap/perception rolls, hazard surfaces,
+fog-of-war reveal) — undo would let players scout/mine-sweep for free. ANamelessWorld doesn't
+have any of those systems yet, but the user wants the *foundation* (movement = committed) in
+place now so that when traps/stealth/reactive mechanics do get designed, they have the right
+model to hook into, rather than retrofitting permanence later. **`TryMoveTo` stays exactly as
+it is today** — click = walk + spend `bMoveAvailable` immediately. No `TurnStartLocation` / no
+`ConfirmMove` / `CancelMove` on APlayerCharacter.
+
 ## Next Task
-**Block G — remaining:** the **modal-input state machine** (build it in `ATacticalPlayerController` — the brain is now the right home); enemy movement; (later polish) drive decal size from MoveRange + show only on player's turn; optional cleanup of dead input/cursor code in APlayerCharacter.
+**Block H2 — Character progression (XP, leveling, Mana economy).** See ROADMAP.md for full
+scope: XP awarded per successful action, leveling can trigger **mid-battle**, CON→MaxHealth
+and INT→MaxMana on level-up, MoveRange stays flat (equipment concern, Phase 2), every ability
+needs a Mana cost assigned. Infra (`XP`, `CharacterLevel`, `Mana`, `MaxMana`, all 6 D&D stats)
+already exists on `UCRPGAttributeSet` since Session 1, unused — this is GameplayEffects/logic
+(GE_GainXP, LevelUp trigger, mana-cost commits), not new attributes.
+
+**First, before H2:** fix the Intimidate button tag typo (see above) — quick, not a real session.
+
+**Still pending from Block G** (queue after H2): enemy movement; (later polish) drive decal
+size from MoveRange + show only on player's turn; optional cleanup of dead input/cursor code
+in APlayerCharacter; optional cleanup of now-unused `CycleTarget()`/`AllTargets`/`AddTarget`.
 
 ## Workflow (important)
 - Claude **writes** code as chat blocks and says exactly **what it does / which file / where**; the **USER applies it** to the game's C++/Blueprint source. NOT vibecoding. Claude may directly edit docs/config/git only.
@@ -53,6 +92,8 @@ then auto-end can wait for move-arrival + animation-finish. Until then End Turn 
 - GE modifier order: MaxHealth before Health to avoid clamping.
 - Local command-line builds: `-Log=/private/tmp/ANamelessWorld-UBT.log -NoUBA`.
 - NOTE: some older "Key Design Decisions" in CLAUDE.md (Protagonist kit, Basic/Heavy attacks) are **superseded** by the manipulation redesign — DESIGN_RATIONALE §6 is the source of truth.
+- **Character capsules don't block `ECC_Visibility`** — floor-clicks (`MoveClick`) rely on this so standing characters don't obstruct movement clicks. Any future click-to-target trace (Confuse, Interact, etc.) must use **`ECC_Pawn`** instead, not `ECC_Visibility`.
+- **Every level needs a `PlayerStart`.** Without one, GameMode falls back to spawning at the editor viewport's camera position (Selected Viewport play mode) — compounds into visible camera drift over repeated Play/Stop cycles in one editor session. `TestLevel` now has one; check new levels too.
 
 ## Session History
 | Session | Topic | Status |
@@ -65,3 +106,4 @@ then auto-end can wait for move-arrival + animation-finish. Until then End Turn 
 | 23 | Phase-1 depth-first redesign + manipulation combat design; controls/data/UX decisions; **Block G**: navmesh, click-to-move, movement radius + decal indicator | ◐ Block G in progress |
 | 24 | **Block G — tactical camera**: decoupled rig pawn + tactical PlayerController possesses it, commands Nameless via `TryMoveTo`; AI-driver possession; WASD/QE/wheel; removed old Set View Target | ◐ Block G in progress |
 | 25 | **Block G — action economy + turn gating**: Move/Action stocks on ABaseCharacter, refill in BeginTurn, gate+spend in TryMoveTo/FireAbility, explicit End Turn button; fixed IsPlayerControlled→IsPlayerCharacter (camera-refactor fallout) | ◐ Block G in progress |
+| 26 | **Block G — modal-input state machine**: ArmedAbilityTag + ArmAbility on ATacticalPlayerController, FireAbilityAtTarget on APlayerCharacter, 1/2/3 hotkeys, WBP_CommandMenu rewired (arm-then-click-target, Cycle Target removed); fixed target-click trace (ECC_Visibility→ECC_Pawn); fixed unrelated PlayerStart-missing camera-drift bug. Scoped out tentative-move/undo (Larian-philosophy decision). Scoped in Block H2 (XP/leveling/Mana) for next session. **Known bug to fix first: Intimidate button tag typo.** | ◐ Block G in progress |

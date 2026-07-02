@@ -100,6 +100,11 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 **Why:** Avoids the Fire-Emblem problem where one Speed stat dominates everything. Keeps turn order and mobility as independent design levers.
 **Rejected:** A single Speed stat governing both order and movement — too swingy/overpowered.
 
+### Mid-battle XP/leveling, but MoveRange stays out of it (Block H2)
+**Decision:** XP is awarded per successful action and can level Nameless up **mid-battle** (not deferred to chapter-end). Level-up raises raw D&D ability scores, which cascade into **CON → MaxHealth** and **INT → MaxMana** — but explicitly **not** DEX → MoveRange.
+**Why:** CON→HP matches the AttributeSet's original Session-1 design and standard D&D 5e. Keeping MoveRange out of the stat-scaling chain protects the Speed/Initiative separation above — DEX already drives Initiative and AC, so routing Movement through it too would recreate the exact "one stat dominates everything" problem this section already rejected. MoveRange growth is deferred to **equipment**, in Phase 2.
+**Rejected:** Tying MoveRange to DEX on level-up — briefly considered, reopens the Speed/Initiative decision above for no real benefit.
+
 ---
 
 ## 6. Combat Design — Nameless's Manipulation Kit

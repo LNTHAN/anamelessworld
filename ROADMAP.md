@@ -36,6 +36,9 @@ Radius-based (BG3-style) free movement. **Action economy = Move + one Action per
 - Command menu → **Move / Confuse / Intimidate / Interact**.
 - Embolden deferred to Chapter 2.
 
+### Block H2 — Character progression (XP, leveling, Mana economy)
+EXP awarded **per successful action** during battle (amount varies by action type — exact values tuned in the Block J balance pass). Leveling triggers **mid-battle**, immediately on threshold crossing — not deferred to chapter-end. Level-up raises **raw D&D ability scores**, which cascade into derived resources: **CON → MaxHealth** (LevelUp adds CON modifier × 5), **INT → MaxMana** (mirrors the CON→HP pattern). **MoveRange stays flat/independent** — explicitly NOT stat-derived, to preserve the locked §5 decision that Speed/Movement stays separate from DEX (which already drives Initiative + AC). MoveRange growth becomes an **equipment** concern in Phase 2. Every ability needs a **Mana cost** assigned (none currently deduct Mana). Infra already scaffolded since Session 1 and unused: `XP`, `CharacterLevel`, `Mana`, `MaxMana`, all 6 D&D core stats already exist on `UCRPGAttributeSet` with Init values + clamping — this block is GameplayEffects/logic (GE_GainXP, LevelUp trigger, mana-cost commits), not new attributes. **Deferred to Phase 2:** unlocking new abilities, skill/ability-upgrade points, equipment.
+
 ### Block I — Environment & Interact
 Interactable-object framework + **Interact** command. Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE). A second damage source able to hit the status-immune boss.
 
@@ -59,6 +62,8 @@ Teach the manipulation loop. **Last** — only once mechanics are frozen.
 ## Phase 2 — Breadth
 - More worlds (each with signature interactables, hazards, and palette)
 - New abilities; **companions with unique kits** (Embolden returns here)
+- Ability-upgrade points spent on the Block H2 progression kit (unlocking/upgrading abilities)
+- Equipment (including MoveRange growth — see Block H2)
 - Branching dialogue + choices
 - Multiple battles per chapter
 

@@ -25,11 +25,32 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
     APlayerCharacter* ControlledCharacter;
 
+    // Idle when NAME_None. Otherwise the tag of the ability waiting for a
+    // target click — the whole "modal input" state fits in one FName.
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
+    FName ArmedAbilityTag = NAME_None;
+
+    // Arms an ability: the next left-click will target it instead of moving.
+    // Called by command-menu buttons and by the 1/2/3 hotkeys. Refuses outside
+    // PlayerTurn or with no Action left — same gate FireAbility checks anyway,
+    // but failing here gives the player instant feedback instead of a dead click.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void ArmAbility(FName TagName);
+
 private:
-    // Left-click: find the floor spot under the mouse, tell Nameless to walk there.
+    // Left-click: behavior depends on ArmedAbilityTag (see .cpp).
     void OnMoveClicked();
 
     // Pass-through commands to Nameless.
     void OnAttackPressed();
     void OnAdvanceDialogue();
+
+    // RMB/Esc: un-arms whatever ability is armed. No-op if already Idle.
+    void OnCancelPressed();
+
+    // 1/2/3 hotkeys — thin wrappers so BindAction (no payload support) can
+    // each arm a specific ability tag.
+    void OnAbilityOnePressed();   // Ability.Support.Embolden
+    void OnAbilityTwoPressed();   // Ability.Debuff.Intimidate
+    void OnAbilityThreePressed(); // Ability.Debuff.Provoke
 };
