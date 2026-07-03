@@ -100,17 +100,28 @@ Split Block H into two passes (see below for why). Part 1, done and verified thi
 - **Verified end-to-end via Output Log:** Confuse cast → next enemy turn correctly redirected
   to the nearest other combatant, roll showed `[Disadvantage]`, turn flow continued normally.
 
-## Next Task
-**Block H, part 2 — Intimidate → displacement + AoE fear, then UI pass.** Bigger/more novel
-than Confuse was — nothing like "reposition a target" or "hit multiple targets in a radius"
-exists in the codebase yet (Confuse reused the old Enraged AI skeleton almost directly;
-Intimidate has no equivalent to build from). Do the Intimidate rework, **then** the deferred
-rename pass together: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
-labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button
-(deferred to Chapter 2 per DESIGN_RATIONALE §6). Source of truth: DESIGN_RATIONALE §6.
+## Decision — Block H part 2 (Intimidate) moved after Block I
+Displacement + AoE don't strictly *need* new geometry to work (TestLevel's existing floor +
+NavMeshBoundsVolume is enough to validate a push landing somewhere legal), but the actual
+DESIGN_RATIONALE §6 payoff — "herding enemies into hazards, e.g. under a rigged bookshelf" —
+depends on Block I's environment work existing. Testing displacement against today's bare
+open floor would be functional but not dramatic. **User chose to hold Intimidate until real
+terrain/hazards exist**, so it can be tested properly against something worth pushing enemies
+into, rather than build it twice (once thin, once for real).
 
-**Queued after H:** Block I (Environment & Interact) → I2 (data architecture) → **H2**
-(progression — XP/leveling/Mana, see decision above) → J (AI/boss/balance).
+## Next Task
+**Block I — Environment & Interact.** Interactable-object framework + **Interact** command.
+Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE) — a second damage source
+able to hit the status-immune boss. This also unblocks Block H part 2.
+
+**After Block I:** **Block H, part 2** — Intimidate → displacement + AoE fear (now testable
+against real terrain/hazards), then the deferred rename pass: `Ability.Debuff.Provoke` →
+`Ability.Debuff.Confuse`, command-menu button labels/Tag Names for both Confuse and the
+reworked Intimidate, hide/remove the Embolden button (deferred to Chapter 2 per
+DESIGN_RATIONALE §6).
+
+**Queued after that:** I2 (data architecture) → **H2** (progression — XP/leveling/Mana, see
+decision above) → J (AI/boss/balance).
 
 **Still pending from Block G** (queue whenever convenient): enemy movement; (later polish)
 drive decal size from MoveRange + show only on player's turn; optional cleanup of dead
