@@ -110,12 +110,17 @@ terrain/hazards exist**, so it can be tested properly against something worth pu
 into, rather than build it twice (once thin, once for real).
 
 ## Next Task
-**Block I — Environment & Interact.** Interactable-object framework + **Interact** command.
-Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE) — a second damage source
-able to hit the status-immune boss. This also unblocks Block H part 2.
+**Block I, phase 1 — level geometry.** Block out Chapter 1's actual room (walls, floor shape,
+furniture placement including a bookshelf mesh) in the editor — **level-design work, not a
+coding session.** TestLevel today is just a bare floor rectangle; both Block I's own Interact
+framework and Block H part 2 (Intimidate) need real terrain/hazards to test against, or they'd
+get built thin now and redone later. Claude can advise on layout/approach but this is editor
+placement work the user drives directly.
 
-**After Block I:** **Block H, part 2** — Intimidate → displacement + AoE fear (now testable
-against real terrain/hazards), then the deferred rename pass: `Ability.Debuff.Provoke` →
+**After phase 1:** **Block I, phase 2** — interactable-object framework + **Interact** command,
+Chapter 1 = rigged bookshelf (arm → crushes enemies in its AoE, a second damage source able to
+hit the status-immune boss). Then **Block H, part 2** — Intimidate → displacement + AoE fear
+(now testable against real terrain), then the deferred rename pass: `Ability.Debuff.Provoke` →
 `Ability.Debuff.Confuse`, command-menu button labels/Tag Names for both Confuse and the
 reworked Intimidate, hide/remove the Embolden button (deferred to Chapter 2 per
 DESIGN_RATIONALE §6).

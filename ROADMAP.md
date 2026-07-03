@@ -37,7 +37,8 @@ Radius-based (BG3-style) free movement. **Action economy = Move + one Action per
 - Embolden deferred to Chapter 2.
 
 ### Block I — Environment & Interact
-Interactable-object framework + **Interact** command. Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE). A second damage source able to hit the status-immune boss.
+**Phase 1 — level geometry first:** block out Chapter 1's actual room (walls, floor shape, furniture placement including a bookshelf mesh) — level-design/editor work, not code. Both this block's own Interact framework and Block H part 2 (Intimidate's displacement/AoE) need real terrain/hazards to be testable against anything more than an empty rectangle; building either against the bare TestLevel floor would mean redoing it once the map exists.
+**Phase 2 — the systems:** interactable-object framework + **Interact** command. Chapter 1 = rigged **bookshelf** (arm → crushes enemies in its AoE) — a second damage source able to hit the status-immune boss.
 
 ### Block I2 — Data architecture (spreadsheet-driven)
 Define `USTRUCT` row types; build **DataTables** (Characters, Abilities) imported from **CSV** (Excel/Sheets workflow). Migrate stats/MoveRange/cooldowns/ability params off Data Assets so balancing is CRUD-in-a-sheet. Lands **before** Block J so the balance pass uses it. *(See DESIGN_RATIONALE §8.)*
