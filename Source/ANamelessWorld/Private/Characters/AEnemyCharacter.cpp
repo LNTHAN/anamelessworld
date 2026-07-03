@@ -44,14 +44,44 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
 
     UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s takes their turn."), *GetName());
 
-    // ── Check State.Enraged ────────────────────────────────────────────────
-    // If Provoke was used on this enemy, they must attack the protagonist
-    // with Disadvantage. If they miss, they damage themselves.
+    // ── Check State.Confused ───────────────────────────────────────────────
+    // If Confuse was used on this enemy, they attack the NEAREST living
+    // combatant (ally or boss, not necessarily the protagonist) with a
+    // forced Heavy Strike (the damage buff) — GA_BasicAttack itself applies
+    // the accuracy penalty (Disadvantage) automatically because State.Confused
+    // is set on this ASC.
     UAbilitySystemComponent* MyASC = GetAbilitySystemComponent();
-    const bool bIsEnraged = MyASC && MyASC->HasMatchingGameplayTag(
-        FGameplayTag::RequestGameplayTag(FName("State.Enraged")));
+    const bool bIsConfused = MyASC && MyASC->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Confused")));
 
-    // ── Pick ability (Basic or Heavy) ──────────────────────────────────────
+    if (bIsConfused)
+    {
+        ABaseCharacter* ConfusedTarget = FindNearestOtherCombatant();
+        if (ConfusedTarget)
+        {
+            UE_LOG(LogTemp, Log,
+                TEXT("AEnemyCharacter: %s is Confused — attacking nearest combatant %s with a forced Heavy Strike."),
+                *GetName(), *ConfusedTarget->GetName());
+
+            FGameplayEventData Payload;
+            Payload.Target = ConfusedTarget;
+
+            SetIsAttacking(true);
+            UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+                this, FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Heavy")), Payload);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log,
+                TEXT("AEnemyCharacter: %s is Confused but no other living combatant to attack."),
+                *GetName());
+        }
+
+        EndTurnAfterDelay();
+        return;
+    }
+
+    // ── Normal turn: pick ability (Basic or Heavy) ─────────────────────────
     const int32 AbilityRoll = FMath::RandRange(0, 99);
     const bool bUseHeavy = (AbilityRoll < HeavyStrikeChance);
 
@@ -60,66 +90,11 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
         : FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Basic"));
 
     UE_LOG(LogTemp, Log,
-        TEXT("AEnemyCharacter: %s chose %s (roll %d, threshold %d).%s"),
+        TEXT("AEnemyCharacter: %s chose %s (roll %d, threshold %d)."),
         *GetName(),
         bUseHeavy ? TEXT("Heavy Strike") : TEXT("Basic Attack"),
-        AbilityRoll, HeavyStrikeChance,
-        bIsEnraged ? TEXT(" [Enraged — rolling with Disadvantage]") : TEXT(""));
+        AbilityRoll, HeavyStrikeChance);
 
-    // ── Enraged: resolve hit/miss here, self-damage on miss ───────────────
-    if (bIsEnraged)
-    {
-        const UCRPGAttributeSet* MyAttributes = Cast<UCRPGAttributeSet>(
-            MyASC->GetAttributeSet(UCRPGAttributeSet::StaticClass()));
-
-        UAbilitySystemComponent* TargetASC = PlayerTarget->GetAbilitySystemComponent();
-        const UCRPGAttributeSet* TargetAttributes = TargetASC
-            ? Cast<UCRPGAttributeSet>(TargetASC->GetAttributeSet(
-                UCRPGAttributeSet::StaticClass()))
-            : nullptr;
-
-        if (MyAttributes && TargetAttributes)
-        {
-            // Roll with Disadvantage — Enraged enemies are reckless and off-balance.
-            const int32 RawRoll = UCRPGCombatLibrary::RollWithDisadvantage();
-            const int32 STRModifier = UCRPGCombatLibrary::GetModifier(
-                MyAttributes->GetStrength());
-            const int32 TargetAC = UCRPGCombatLibrary::CalculateAC(
-                TargetAttributes->GetDexterity());
-            const int32 FinalRoll = RawRoll + STRModifier;
-
-            const FString MyName = GetName();
-            UE_LOG(LogTemp, Log,
-                TEXT("AEnemyCharacter: %s enraged roll %d + %d (STR) = %d vs AC %d."),
-                *MyName, RawRoll, STRModifier, FinalRoll, TargetAC);
-
-            if (FinalRoll < TargetAC)
-            {
-                // Miss — the enraged enemy damages themselves instead.
-                // Fire the ability with SELF as the target so GA_BasicAttack
-                // applies the damage effect to this enemy's own ASC.
-                UE_LOG(LogTemp, Log,
-                    TEXT("AEnemyCharacter: %s missed while Enraged — damages self!"),
-                    *MyName);
-
-                FGameplayEventData SelfPayload;
-                SelfPayload.Target = this;
-
-                SetIsAttacking(true);
-                UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-                    this, AttackTag, SelfPayload);
-
-                EndTurnAfterDelay();
-                return;
-            }
-
-            // Hit despite Disadvantage — fall through to normal attack below.
-            UE_LOG(LogTemp, Log,
-                TEXT("AEnemyCharacter: %s hit despite being Enraged."), *MyName);
-        }
-    }
-
-    // ── Normal attack — fire ability at the player ─────────────────────────
     FGameplayEventData Payload;
     Payload.Target = PlayerTarget;
 
@@ -128,6 +103,28 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
         this, AttackTag, Payload);
 
     EndTurnAfterDelay();
+}
+
+ABaseCharacter* AEnemyCharacter::FindNearestOtherCombatant() const
+{
+    if (!TurnManager) return nullptr;
+
+    ABaseCharacter* Nearest = nullptr;
+    float NearestDistSq = 0.f;
+
+    for (ABaseCharacter* Combatant : TurnManager->GetTurnOrder())
+    {
+        if (!Combatant || Combatant == this || !Combatant->IsAlive()) continue;
+
+        const float DistSq = FVector::DistSquared(GetActorLocation(), Combatant->GetActorLocation());
+        if (!Nearest || DistSq < NearestDistSq)
+        {
+            NearestDistSq = DistSq;
+            Nearest = Combatant;
+        }
+    }
+
+    return Nearest;
 }
 
 void AEnemyCharacter::EndTurnAfterDelay()

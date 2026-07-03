@@ -141,10 +141,9 @@ void APlayerCharacter::OnAttackPressed()
     if (DialogueComp && DialogueComp->IsDialogueActive())
     {
         AdvanceDialogue();
-        return;
     }
-
-    FireAbility(FName("Ability.Attack.Basic"));
+    // Basic Attack retired — Nameless deals no direct damage (DESIGN_RATIONALE §6).
+    // GA_BasicAttack itself stays: enemies still use it to attack Nameless.
 }
 
 void APlayerCharacter::AdvanceDialogue()

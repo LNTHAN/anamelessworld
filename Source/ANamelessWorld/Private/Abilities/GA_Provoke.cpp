@@ -91,7 +91,7 @@ void UGA_Provoke::ActivateAbility(
 
             const FString TargetName = TargetCharacter->GetName();
             UE_LOG(LogTemp, Log,
-                TEXT("GA_Provoke: %s is now Enraged — will attack protagonist with Disadvantage."),
+                TEXT("GA_Provoke: %s is now Confused — will attack the nearest combatant on their next turn."),
                 *TargetName);
         }
     }

@@ -75,12 +75,39 @@ pattern DESIGN_RATIONALE §5 warns against. **New order: H (kit rework) → I (I
 (DataTables) → H2 (progression, built data-driven from I2 instead of hardcoded per-ability
 GameplayEffect assets) → J.** ROADMAP.md updated to match.
 
+## Block H, part 1 — retire Basic Attack + Confuse rework — DONE
+Split Block H into two passes (see below for why). Part 1, done and verified this session:
+- **Player's Basic Attack retired:** `APlayerCharacter::OnAttackPressed` no longer calls
+  `FireAbility("Ability.Attack.Basic")` — dialogue-advance fallback only now. `GA_BasicAttack`
+  itself, `GE_DamageInstant`, `GE_HeavyStrike` all untouched — **enemies still use this exact
+  ability/class to attack Nameless**, retiring was player-access-only.
+- **`GA_BasicAttack` gained a Disadvantage roll**, mirroring its existing `State.Advantage`
+  check — new `State.Confused` check, `RollWithDisadvantage()`. Both cancel out if present
+  together (D&D rule).
+- **`AEnemyCharacter::ExecuteAITurn` reworked**: `State.Enraged` handling → `State.Confused`
+  handling. New `FindNearestOtherCombatant()` (via `TurnManager->GetTurnOrder()`, excludes
+  self + dead) picks the target — confirmed in testing it correctly picked the *other enemy*
+  over the player. Forced `Ability.Attack.Heavy` (the "damage buff" — reuses existing
+  `GE_HeavyStrike` instead of a new bonus-damage system) — Disadvantage now comes free from
+  `GA_BasicAttack`'s own check, so the old manual roll + self-damage-on-miss quirk is gone
+  (wasn't part of Confuse's spec anyway).
+- **`GE_Provoke` now grants `State.Confused`** (was `State.Enraged`); `DefaultGameplayTags.ini`
+  updated to match (`State.Enraged` removed, `State.Confused` added).
+- **Deliberately NOT renamed yet:** `Ability.Debuff.Provoke` trigger tag and the command-menu
+  button still say "Provoke" — the ability behaves as Confuse now, just under the old name/tag,
+  to avoid a window where the button's Tag Name and the ability's trigger tag are out of sync.
+  Rename both together next time this is picked up.
+- **Verified end-to-end via Output Log:** Confuse cast → next enemy turn correctly redirected
+  to the nearest other combatant, roll showed `[Disadvantage]`, turn flow continued normally.
+
 ## Next Task
-**Block H — Manipulation kit (final Chapter 1 design).** See ROADMAP.md: retire Nameless's
-direct damage (remove Basic/Heavy Strike), rework Provoke → **Confuse** (nearest-creature
-targeting, damage-buff + low accuracy), rework Intimidate → **displacement + AoE fear**,
-command menu becomes Move/Confuse/Intimidate/Interact, defer Embolden to Chapter 2. Source of
-truth: DESIGN_RATIONALE §6.
+**Block H, part 2 — Intimidate → displacement + AoE fear, then UI pass.** Bigger/more novel
+than Confuse was — nothing like "reposition a target" or "hit multiple targets in a radius"
+exists in the codebase yet (Confuse reused the old Enraged AI skeleton almost directly;
+Intimidate has no equivalent to build from). Do the Intimidate rework, **then** the deferred
+rename pass together: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
+labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button
+(deferred to Chapter 2 per DESIGN_RATIONALE §6). Source of truth: DESIGN_RATIONALE §6.
 
 **Queued after H:** Block I (Environment & Interact) → I2 (data architecture) → **H2**
 (progression — XP/leveling/Mana, see decision above) → J (AI/boss/balance).

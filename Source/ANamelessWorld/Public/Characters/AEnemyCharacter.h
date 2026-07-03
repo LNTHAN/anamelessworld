@@ -45,4 +45,9 @@ private:
 
     void EndTurnAfterDelay();
     void EndTurnNow();
+
+    // Finds the nearest OTHER living combatant to this one (via TurnManager's
+    // roster) — Confuse's targeting rule: attack whoever's closest, not
+    // necessarily the protagonist.
+    ABaseCharacter* FindNearestOtherCombatant() const;
 };

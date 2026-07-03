@@ -162,14 +162,27 @@ void UGA_BasicAttack::ActivateAbility(
         CachedCaster = Caster;
     }
 
-    // Check if the attacker has State.Advantage (from GA_Embolden).
-    // If so, roll 2d20 and take the higher result.
+    // Check for State.Advantage (from GA_Embolden) and State.Confused (from
+    // Confuse — forces the confused attacker's own hit to roll with
+    // Disadvantage). D&D rule: if both are present, they cancel out.
     const bool bHasAdvantage = ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(
         FGameplayTag::RequestGameplayTag(FName("State.Advantage")));
+    const bool bHasDisadvantage = ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Confused")));
 
-    const int32 RawRoll = bHasAdvantage
-        ? UCRPGCombatLibrary::RollWithAdvantage()
-        : UCRPGCombatLibrary::RollD20();
+    int32 RawRoll;
+    if (bHasAdvantage && !bHasDisadvantage)
+    {
+        RawRoll = UCRPGCombatLibrary::RollWithAdvantage();
+    }
+    else if (bHasDisadvantage && !bHasAdvantage)
+    {
+        RawRoll = UCRPGCombatLibrary::RollWithDisadvantage();
+    }
+    else
+    {
+        RawRoll = UCRPGCombatLibrary::RollD20();
+    }
 
     const int32 STRModifier = UCRPGCombatLibrary::GetModifier(
         AttackerAttributes->GetStrength());
@@ -183,7 +196,7 @@ void UGA_BasicAttack::ActivateAbility(
         TEXT("GA_BasicAttack: %s rolled %d + %d (STR) = %d vs AC %d.%s"),
         *GetAvatarActorFromActorInfo()->GetName(),
         RawRoll, STRModifier, FinalRoll, TargetAC,
-        bHasAdvantage ? TEXT(" [Advantage]") : TEXT(""));
+        bHasDisadvantage ? TEXT(" [Disadvantage]") : (bHasAdvantage ? TEXT(" [Advantage]") : TEXT("")));
 
     if (FinalRoll >= TargetAC)
     {
