@@ -125,9 +125,10 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 **Rejected:** A boss that can be Confused — trivializes the fight and removes all pressure.
 
 ### Intimidate = displacement / AoE control, not a second disable
-**Decision:** Re-theme Intimidate from "stun one mob" to **forced displacement + AoE fear** (scatter enemies away from Nameless).
-**Why:** As a single-target disable it was redundant with Confuse, so players would always pick the stronger one. As displacement it owns a different job — survival, repositioning, and herding enemies into hazards (e.g. under a rigged bookshelf).
-**Rejected:** Keep both as single-target disables — redundant, one strictly dominates.
+**Decision:** Re-theme Intimidate from "stun one mob" to **forced displacement + AoE fear** (scatter enemies away from Nameless). Concrete mechanic: on a successful cast, every affected enemy **instantly** retreats in a straight line away from the direction they're facing, for a distance equal to their own `MoveRange`. If that line passes near **another enemy** (never Nameless — see below), the retreat stops there and **both** take damage equal to the retreating enemy's own normal-attack damage (reuses their existing `GE_DamageInstant`/`GE_HeavyStrike`, no new damage formula). If it instead reaches a wall/level boundary first, the retreat just stops there, no bonus effect.
+**Why:** As a single-target disable it was redundant with Confuse, so players would always pick the stronger one. As displacement it owns a different job — survival, repositioning, and herding enemies into each other or into hazards (e.g. under a rigged bookshelf). Instant (not delayed to their next turn, unlike Confuse) because fear is a startled reaction, not a persistent mental state — the payoff should be visible immediately.
+**Nameless is excluded from the collision check** — a retreating enemy can never collide with (and damage) Nameless himself, only other enemies/the boss. Anything else would be backdoor chip damage through the "zero direct damage" rule (see below) via a side effect instead of an attack.
+**Rejected:** Keep both as single-target disables — redundant, one strictly dominates. Also rejected: delayed (next-turn) retreat like Confuse — less dramatic payoff for what's fictionally a startle/panic reaction.
 
 ### Embolden deferred to Chapter 2
 **Decision:** Cut the ally-buff (Embolden/Advantage) from Chapter 1; reintroduce it when Nameless gains his first **companion** in Chapter 2.
