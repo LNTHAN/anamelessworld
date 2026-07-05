@@ -9,6 +9,7 @@
 #include "ATacticalPlayerController.generated.h"
 
 class APlayerCharacter;
+class ABaseCharacter;
 
 UCLASS()
 class ANAMELESSWORLD_API ATacticalPlayerController : public APlayerController
@@ -35,8 +36,16 @@ public:
     // PlayerTurn or with no Action left — same gate FireAbility checks anyway,
     // but failing here gives the player instant feedback instead of a dead click.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+
     void ArmAbility(FName TagName);
 
+    // Subscribes the camera to TurnManager's turn-started broadcasts, so it
+    // can auto-focus on whoever's turn it is. Must be called from the Level
+    // Blueprint BEFORE Start Combat fires (see .cpp comment) — otherwise the
+    // very first combatant's turn gets missed.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void BindToTurnManager();
+    
 private:
     // Left-click: behavior depends on ArmedAbilityTag (see .cpp).
     void OnMoveClicked();
@@ -53,4 +62,7 @@ private:
     void OnAbilityOnePressed();   // Ability.Support.Embolden
     void OnAbilityTwoPressed();   // Ability.Debuff.Intimidate
     void OnAbilityThreePressed(); // Ability.Debuff.Provoke
+
+    UFUNCTION()
+    void OnCombatTurnStarted(ABaseCharacter* ActiveCombatant);
 };

@@ -5,6 +5,7 @@
 #include "Characters/ABaseCharacter.h"
 #include "TurnManager/UTurnManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "Camera/ATacticalCameraPawn.h"
 
 void ATacticalPlayerController::BeginPlay()
 {
@@ -111,4 +112,29 @@ void ATacticalPlayerController::OnAbilityTwoPressed()
 void ATacticalPlayerController::OnAbilityThreePressed()
 {
     ArmAbility(FName("Ability.Debuff.Provoke"));
+}
+
+void ATacticalPlayerController::BindToTurnManager()
+{
+    // ControlledCharacter->TurnManager only becomes valid once the Level
+    // Blueprint calls SetupCombat() on the player — this function must run
+    // AFTER that, but BEFORE TurnManager->StartCombat() fires, or the first
+    // combatant's OnTurnStarted broadcast happens with nobody subscribed yet.
+    if (!ControlledCharacter || !ControlledCharacter->TurnManager) return;
+
+    ControlledCharacter->TurnManager->OnTurnStarted.AddDynamic(
+        this, &ATacticalPlayerController::OnCombatTurnStarted);
+}
+
+void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombatant)
+{
+    if (!ActiveCombatant) return;
+
+    if (ATacticalCameraPawn* CameraPawn = Cast<ATacticalCameraPawn>(GetPawn()))
+    {
+        // Offset above their head, not dead-center in their capsule — focusing
+        // exactly on the capsule center puts the pivot inside their own
+        // collision, which immediately triggers the spring arm's wall pull-in.
+        CameraPawn->FocusOn(ActiveCombatant->GetActorLocation() + FVector(0.f, 0.f, 150.f));
+    }
 }

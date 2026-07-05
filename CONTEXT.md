@@ -109,21 +109,48 @@ open floor would be functional but not dramatic. **User chose to hold Intimidate
 terrain/hazards exist**, so it can be tested properly against something worth pushing enemies
 into, rather than build it twice (once thin, once for real).
 
-## Next Task
-**Block I, phase 1 — level geometry.** Block out Chapter 1's actual room (walls, floor shape,
-furniture placement including a bookshelf mesh) in the editor — **level-design work, not a
-coding session.** TestLevel today is just a bare floor rectangle; both Block I's own Interact
-framework and Block H part 2 (Intimidate) need real terrain/hazards to test against, or they'd
-get built thin now and redone later. Claude can advise on layout/approach but this is editor
-placement work the user drives directly.
+## Block I, phase 1 — level layout + camera focus — DONE
+**Library room greybox built** in TestLevel (20×20m, floor Plane was already Scale 20 at origin,
+NavMeshBoundsVolume already covered it). Perimeter walls (cube StaticMeshActors, 20cm thick,
+300cm tall, west wall split for a 150cm door gap near Nameless). Five staggered aisle rows of
+bookshelf cubes (30cm thick, 200cm tall) through the middle — `Shelf_RowN_1/2`, with the middle
+row renamed `Shelf_Rigged_N/S` (future Interact target, no logic yet). Two `Elevation_West/East`
+book-stack platforms (30cm tall — low enough the navmesh steps onto them with no ramp needed;
+aesthetic/positional only for now, no mechanical rule — see DESIGN_RATIONALE §5). Combatants
+repositioned: Nameless SW near door, Enemy mid-east, Boss NE corner (entrenched). `BattleFieldCenter`
+TargetPoint placed at (0,0,100).
+- **Capsule-height gotcha:** a character's `Location.Z` must equal its Capsule **Half Height**
+  (found via Details search "capsule") — it's the capsule *center*, not the feet. All three are
+  88. Setting Z=0 sinks them into the floor.
+- **PlayerStart is only the camera-rig spawn**, not a gameplay position (Nameless is AI-possessed,
+  positioned independently). Placed outside the room at (−1400,0,1400) for a clean establishing
+  vantage — but this is now largely moot, see camera focus below.
 
-**After phase 1:** **Block I, phase 2** — interactable-object framework + **Interact** command,
+**Turn-based camera focus — DONE** (`ATacticalCameraPawn` + `ATacticalPlayerController`):
+- **Establishing shot:** `BeginPlay` snaps the pivot to `BattleFieldCenter` (via
+  `GetActorOfClass<ATargetPoint>`) at `WideZoom` (2200). Also fixed the old spawn-drift by
+  starting `TargetZoom` at MinZoom.
+- **Focus-on-turn:** controller's `BindToTurnManager()` (called from Level BP right before
+  `Start Combat`) subscribes `OnCombatTurnStarted` to `TurnManager->OnTurnStarted`; each turn it
+  calls `CameraPawn->FocusOn(active->GetActorLocation() + (0,0,150))`. The **+150 Z offset is
+  required** — focusing on the capsule center puts the pivot *inside* the character's own collision,
+  triggering the spring-arm wall pull-in (camera-inside-character bug).
+- **`FocusOn` eases via a `bIsFocusing` flag**, NOT a distance check: Tick eases toward
+  `TargetLocation` only while the flag is true, clears it on arrival (within 5uu), never touches
+  location again until the next `FocusOn`. A distance check re-triggered every time WASD panned away
+  → camera fought manual pan / drifted back. Flag fixes it: manual pan is free between turns.
+- **Zoom:** added `=`/`-` keyboard zoom (macOS trackpad has no scroll wheel) alongside MouseWheelAxis.
+- **Rotation already existed** (Q/E free orbit from Block G) — user was fine with it, no snap-rotate added.
+
+## Next Task
+**Block I, phase 2** — interactable-object framework + **Interact** command,
 Chapter 1 = rigged bookshelf (arm → crushes enemies in its AoE, a second damage source able to
-hit the status-immune boss). Then **Block H, part 2** — Intimidate → displacement + AoE fear
-(now testable against real terrain), then the deferred rename pass: `Ability.Debuff.Provoke` →
-`Ability.Debuff.Confuse`, command-menu button labels/Tag Names for both Confuse and the
-reworked Intimidate, hide/remove the Embolden button (deferred to Chapter 2 per
-DESIGN_RATIONALE §6).
+hit the status-immune boss) — the `Shelf_Rigged_N/S` cubes in TestLevel are the placeholder
+target. Then **Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
+real terrain; retreat collides with walls/shelves/enemies per DESIGN_RATIONALE §6), then the
+deferred rename pass: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
+labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button
+(deferred to Chapter 2 per DESIGN_RATIONALE §6).
 
 **Queued after that:** I2 (data architecture) → **H2** (progression — XP/leveling/Mana, see
 decision above) → J (AI/boss/balance).
@@ -140,7 +167,10 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 
 ## Key Notes
 - **No Claude/AI anywhere in the repo** (files, commit messages, no co-author trailer).
-- Adding/removing a `UPROPERTY`/`UFUNCTION`/`UCLASS` member → **full compile + UE restart** (Live Coding only patches existing function bodies).
+- **Live Coding boundary (sharpened):** the line is *structure vs logic*. Adding/removing **any member variable** (reflected or not), adding/removing a function, or changing a function's **signature** → **full compile + UE restart** (they change the class's memory layout / function table). Only changes **inside an existing function body** (new logic, values, log lines) are Live-Coding-safe. Analogy: values patch live, structure needs a build.
+- **New `UFUNCTION`/`UPROPERTY` don't appear in Blueprint search until a full editor restart** — a successful compile alone isn't enough (bit us twice: `ArmAbility`, `BindToTurnManager`).
+- **Blueprint "Cast To" search strips the leading type-prefix letter** — search `Cast To TacticalPlayerController`, NOT `Cast To ATacticalPlayerController`.
+- **Character `Location.Z` must equal the Capsule Half Height** (all 3 chars = 88), or the model sinks into / floats above the floor. It's the capsule *center*, not the feet.
 - Legacy input: `Config/DefaultInput.ini` ActionMappings + `BindAction`. `MoveClick = LeftMouseButton`.
 - Don't paste large error logs — first 5–10 lines. Hot reload errors clear on full UE restart.
 - GE modifier order: MaxHealth before Health to avoid clamping.
@@ -161,3 +191,5 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 24 | **Block G — tactical camera**: decoupled rig pawn + tactical PlayerController possesses it, commands Nameless via `TryMoveTo`; AI-driver possession; WASD/QE/wheel; removed old Set View Target | ◐ Block G in progress |
 | 25 | **Block G — action economy + turn gating**: Move/Action stocks on ABaseCharacter, refill in BeginTurn, gate+spend in TryMoveTo/FireAbility, explicit End Turn button; fixed IsPlayerControlled→IsPlayerCharacter (camera-refactor fallout) | ◐ Block G in progress |
 | 26 | **Block G — modal-input state machine**: ArmedAbilityTag + ArmAbility on ATacticalPlayerController, FireAbilityAtTarget on APlayerCharacter, 1/2/3 hotkeys, WBP_CommandMenu rewired (arm-then-click-target, Cycle Target removed); fixed target-click trace (ECC_Visibility→ECC_Pawn); fixed unrelated PlayerStart-missing camera-drift bug. Scoped out tentative-move/undo (Larian-philosophy decision). Scoped in Block H2 (XP/leveling/Mana) for next session. **Known bug to fix first: Intimidate button tag typo.** | ◐ Block G in progress |
+| 27 | **Block H pt1** — retire player Basic Attack + Confuse rework (Provoke→Confuse: nearest-combatant targeting via FindNearestOtherCombatant, forced Heavy Strike, GA_BasicAttack gained a State.Confused Disadvantage check); fixed Intimidate/Embolden button tag typos. Reordered H2 after I2, deferred Intimidate pt2 + Block I until real terrain exists; locked concrete Intimidate mechanic in DESIGN_RATIONALE §6. | ✓ |
+| 28 | **Block I pt1** — library room greybox (walls/door/5 aisle rows/elevation stacks), combatants repositioned, capsule-Z fix; **turn-based camera focus** (establishing wide shot → FocusOn active combatant each turn via OnTurnStarted, bIsFocusing eased pan, +150 Z offset, =/− zoom keys); committed the long-pending BP_ character rename. | ◐ Block I in progress |

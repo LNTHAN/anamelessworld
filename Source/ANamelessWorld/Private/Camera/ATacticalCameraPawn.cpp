@@ -3,6 +3,8 @@
 #include "Camera/ATacticalCameraPawn.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/TargetPoint.h"
 
 ATacticalCameraPawn::ATacticalCameraPawn()
 {
@@ -32,6 +34,28 @@ ATacticalCameraPawn::ATacticalCameraPawn()
     bUseControllerRotationYaw = false;
     bUseControllerRotationPitch = false;
     bUseControllerRotationRoll = false;
+}
+
+void ATacticalCameraPawn::BeginPlay()
+{
+    Super::BeginPlay();
+
+    // Battlefield center is an authored reference point, not a hardcoded
+    // coordinate or something derived from PlayerStart — decouples the
+    // establishing shot from wherever combatants happen to be placed.
+    FVector CenterLocation = GetActorLocation();
+    if (ATargetPoint* Center = Cast<ATargetPoint>(
+            UGameplayStatics::GetActorOfClass(this, ATargetPoint::StaticClass())))
+    {
+        CenterLocation = Center->GetActorLocation();
+    }
+
+    // Snap instantly (no easing) so there's no flash of the wrong framing
+    // on the very first frame — Tick's easing only applies to LATER changes.
+    SetActorLocation(CenterLocation);
+    TargetLocation = CenterLocation;
+    TargetZoom = WideZoom;
+    SpringArm->TargetArmLength = WideZoom;
 }
 
 void ATacticalCameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -80,6 +104,13 @@ void ATacticalCameraPawn::Zoom(float Value)
     TargetZoom = FMath::Clamp(TargetZoom - Value * ZoomStep, MinZoom, MaxZoom);
 }
 
+void ATacticalCameraPawn::FocusOn(const FVector& WorldLocation)
+{
+    TargetLocation = WorldLocation;
+    TargetZoom = FocusZoom;
+    bIsFocusing = true;
+}
+
 void ATacticalCameraPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -87,4 +118,20 @@ void ATacticalCameraPawn::Tick(float DeltaSeconds)
     // Ease the boom toward the desired length for smooth zoom.
     SpringArm->TargetArmLength =
         FMath::FInterpTo(SpringArm->TargetArmLength, TargetZoom, DeltaSeconds, 10.f);
+
+    // Ease toward the focus target ONLY while a transition is active. Once
+    // it converges, stop touching location entirely — checking distance
+    // instead of a flag would re-trigger every time manual panning moves you
+    // away from the old target, fighting WASD forever instead of just once.
+    if (bIsFocusing)
+    {
+        const FVector NewLocation =
+            FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaSeconds, FocusPanSpeed);
+        SetActorLocation(NewLocation);
+
+        if (NewLocation.Equals(TargetLocation, 5.f))
+        {
+            bIsFocusing = false;
+        }
+    }
 }
