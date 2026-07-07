@@ -39,6 +39,19 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
     // Only act if it's THIS enemy's turn.
     if (ActiveCombatant != this) return;
 
+    // Don't act instantly — the turn just started and the camera is only now
+    // easing toward us. Wait a beat so it settles, then PerformAITurn() runs the
+    // decision + attack and the animation actually gets seen.
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            TurnStartTimerHandle, this, &AEnemyCharacter::PerformAITurn,
+            TurnStartDelay, false);
+    }
+}
+
+void AEnemyCharacter::PerformAITurn()
+{
     // Guard: need a living target.
     if (!PlayerTarget || !PlayerTarget->IsAlive()) return;
 

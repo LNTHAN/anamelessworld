@@ -181,8 +181,25 @@ from inside the blast doesn't self-detonate); damage hits everyone.
   to move (still-pending Block G item); today only the arm-time immediate sweep can fire it. The
   herd→spring payoff lands with enemy movement + Intimidate displacement.
 
+## Turn-start intermission — DONE
+Enemies no longer act the instant their turn starts (the swing used to fire while the camera was
+still easing in, so you missed the animation). `AEnemyCharacter::ExecuteAITurn` is now a thin
+handler: guard `!= this` → start `TurnStartTimerHandle` for `TurnStartDelay` (EditAnywhere, 1.5s,
+tunable per enemy) → `PerformAITurn()` (the old decision+attack brain, renamed, unchanged). Camera
+settles during the beat, then the enemy acts.
+- **Player turn deliberately gets NO intermission** — the human doesn't auto-act, so their own
+  think-time already covers the camera settle; a forced delay would just add input latency.
+- **Deferred polish:** if clicking a move *while the camera is still panning in* feels jittery in
+  playtest, add a lightweight "ignore clicks until focus finishes" gate in the controller using the
+  camera pawn's existing `bIsFocusing` flag — NOT a blanket timer. 2-line follow-up, only if needed.
+
 ## Next Task
-**Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
+**Enemy movement FIRST** (user reprioritized — moved ahead of the new ability): enemies
+currently attack from wherever they stand and never path. Movement is the soft blocker that
+gives the rigged-shelf trap (enemy-enter spring) AND Intimidate's displacement something real
+to act on, so it comes before the ability work.
+
+**Then Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
 real terrain; retreat collides with walls/shelves/enemies per DESIGN_RATIONALE §6), then the
 deferred rename pass: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
 labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button

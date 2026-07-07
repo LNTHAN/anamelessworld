@@ -40,12 +40,22 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ANW|Combat")
     int32 HeavyStrikeChance = 30;
 
+    // Intermission at the start of this enemy's turn, in seconds, before it acts.
+    // Lets the camera finish focusing so the attack animation is actually seen.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Combat")
+    float TurnStartDelay = 1.5f;    
+
 private:
     FTimerHandle TurnEndTimerHandle;
 
     void EndTurnAfterDelay();
     void EndTurnNow();
 
+    FTimerHandle TurnStartTimerHandle;
+
+    // The real turn logic (decide + attack), run after the TurnStartDelay beat.
+    void PerformAITurn();
+        
     // Finds the nearest OTHER living combatant to this one (via TurnManager's
     // roster) — Confuse's targeting rule: attack whoever's closest, not
     // necessarily the protagonist.
