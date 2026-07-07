@@ -137,9 +137,13 @@ A living record of design decisions and the reasoning behind them. Each entry ca
 **Rejected:** Repurpose Embolden onto enemies in Ch1 — confusing semantics, and it competes with the cleaner kit.
 
 ### Interact — manipulating the world is a core verb
-**Decision:** Add an **Interact** command that arms/triggers environmental objects, each with a unique effect per world. Chapter 1 = **rigged bookshelves** (arm one; it crushes enemies caught in its AoE).
-**Why:** A manipulator who weaponizes the *world itself* is deeply on-theme (and the bookshelf is perfect VN-world flavor). It's also a second damage source that can reach the status-immune boss.
-**Rejected:** Combat with no environmental interaction — wastes the manipulator fantasy and leaves the boss with too few counters.
+**Decision:** Add an **Interact** command that arms environmental objects, each with a unique effect per world. Chapter 1 = **rigged bookshelves**, built as a **two-stage proximity trap**:
+- **Stage 1 — Arm** (the Interact command, costs the player's Action; Nameless must be within interact range ~200 cm): rigs the shelf. It becomes *armed* and watches its AoE. Nameless can then walk away and spend later turns herding enemies toward it.
+- **Stage 2 — Spring** (automatic, free): while armed, the instant a living **enemy** enters the AoE, the shelf topples and applies the crush damage (`GE_HeavyStrike`) to **every living character** inside the blast — enemies, allies, **and Nameless himself**. One-shot — a toppled shelf is spent.
+
+**Trigger and damage are deliberately split.** *Trigger* is enemy-entry only: Nameless arms from ~200 cm but the AoE is ~300 cm, so at arm-time he stands inside his own blast — if his presence could spring it, arming would self-detonate. Fiction: he rigged it and steps over the tripwire; enemies don't. *Damage* is universal: a toppling shelf obeys physics, so if Nameless (or any ally) is still in the AoE when an enemy trips it, they're crushed too. He must arm it and **clear out** before herding enemies in. The boss *is* an enemy, so this still reaches the status-immune boss.
+**Why:** A manipulator who weaponizes the *world itself* is deeply on-theme (and the bookshelf is perfect VN-world flavor). It's a second damage source that can reach the status-immune boss. **Two-stage + proximity** (rather than "interact = crush now") makes it the *cunning-trapper* fantasy — rig it, retreat, herd prey in with Confuse/Intimidate — instead of forcing Nameless to stand next to his own blast.
+**Rejected:** *Interact = detonate immediately* — forces Nameless to crush from inside the blast, and loses the cunning rig-and-retreat fantasy. *Timed detonation (after N turns)* — can whiff on an empty tile and forces the player to predict enemy pathing turns ahead; proximity rewards herding and needs no round-counting. *Combat with no environmental interaction* — wastes the manipulator fantasy and leaves the boss with too few counters.
 
 ### Movement ≈ equal — safety comes from control, never speed
 **Decision:** Nameless's movement is roughly equal to enemies' (at most slightly higher). He survives via abilities + terrain + action economy (Move *or* Act tradeoffs), not by outrunning anyone.

@@ -11,6 +11,7 @@
 #include "GameFramework/PlayerController.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
+#include "Interactables/AInteractableActor.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -90,6 +91,38 @@ void APlayerCharacter::FireAbilityAtTarget(const FName& TagName, ABaseCharacter*
 {
     CurrentTarget = Target;
     FireAbility(TagName);
+}
+
+bool APlayerCharacter::TryInteract(AInteractableActor* Target)
+{
+    if (!Target) return false;
+
+    // Same turn gate as every other action.
+    if (!TurnManager || TurnManager->GetCurrentState() != ETurnState::PlayerTurn)
+        return false;
+
+    // Action economy: interacting IS your action for the turn.
+    if (!bActionAvailable)
+    {
+        UE_LOG(LogTemp, Log, TEXT("APlayerCharacter: no action left to interact."));
+        return false;
+    }
+
+    // Must be within reach to rig it. Straight-line distance is fine — the shelf
+    // is right there; this isn't a pathed move.
+    const float Dist = Target->GetDistanceToBody(GetActorLocation());    
+    
+    if (Dist > InteractRange)
+    {
+        UE_LOG(LogTemp, Log,
+            TEXT("APlayerCharacter: too far to interact (%.0f > %.0f)."),
+            Dist, InteractRange);
+        return false;   // stay armed — player can walk closer and click again
+    }
+
+    bActionAvailable = false;   // spend the Action stock
+    Target->Arm();              // stage 1 — the shelf is now live
+    return true;
 }
 
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)

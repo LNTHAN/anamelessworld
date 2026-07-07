@@ -6,6 +6,7 @@
 #include "TurnManager/UTurnManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/ATacticalCameraPawn.h"
+#include "Interactables/AInteractableActor.h"
 
 void ATacticalPlayerController::BeginPlay()
 {
@@ -40,6 +41,8 @@ void ATacticalPlayerController::SetupInputComponent()
         &ATacticalPlayerController::OnAbilityTwoPressed);
     InputComponent->BindAction("AbilityThree", IE_Pressed, this,
         &ATacticalPlayerController::OnAbilityThreePressed);
+    InputComponent->BindAction("Interact", IE_Pressed, this,
+        &ATacticalPlayerController::OnInteractPressed);    
 }
 
 void ATacticalPlayerController::ArmAbility(FName TagName)
@@ -58,9 +61,31 @@ void ATacticalPlayerController::OnMoveClicked()
 {
     if (!ControlledCharacter) return;
 
-    // Armed: this click picks a TARGET, not a destination.
+        // Armed: this click picks a TARGET, not a destination.
     if (ArmedAbilityTag != NAME_None)
     {
+        // Interact mode: trace for a rigged OBJECT, not a character. We trace on
+        // ECC_Visibility (the shelf mesh blocks it) so the ray passes through any
+        // character standing in front — character capsules don't block Visibility.
+        if (ArmedAbilityTag == FName("Action.Interact"))
+        {
+            FHitResult Hit;
+            if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+            {
+                if (AInteractableActor* Object = Cast<AInteractableActor>(Hit.GetActor()))
+                {
+                    // Only un-arm if it actually rigged — too-far returns false,
+                    // so the player can walk closer and click the shelf again.
+                    if (ControlledCharacter->TryInteract(Object))
+                    {
+                        ArmedAbilityTag = NAME_None;
+                    }
+                }
+            }
+            return; // clicked empty space / not a shelf: stay armed, try again
+        }
+
+        // Ability mode: trace for a character target on ECC_Pawn.
         FHitResult Hit;
         if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
         {
@@ -71,7 +96,6 @@ void ATacticalPlayerController::OnMoveClicked()
             }
         }
         // Missed (empty space or a non-target actor): stay armed, try again.
-        // Armed clicks never fall through to movement.
         return;
     }
 
@@ -114,6 +138,14 @@ void ATacticalPlayerController::OnAbilityThreePressed()
     ArmAbility(FName("Ability.Debuff.Provoke"));
 }
 
+void ATacticalPlayerController::OnInteractPressed()
+{
+    // "Action.Interact" is a sentinel, not a real GameplayTag — it never reaches
+    // FireAbility, it just flips OnMoveClicked into shelf-targeting mode. ArmAbility
+    // still enforces the PlayerTurn + Action gate, same as the ability hotkeys.
+    ArmAbility(FName("Action.Interact"));
+}
+
 void ATacticalPlayerController::BindToTurnManager()
 {
     // ControlledCharacter->TurnManager only becomes valid once the Level
@@ -128,6 +160,11 @@ void ATacticalPlayerController::BindToTurnManager()
 
 void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombatant)
 {
+    // A fresh turn always starts Idle — drop any ability/interact left armed from
+    // a previous turn, or it hijacks every click (traces for a target that a plain
+    // move-click will never satisfy) and the player can't move.
+    ArmedAbilityTag = NAME_None;
+        
     if (!ActiveCombatant) return;
 
     if (ATacticalCameraPawn* CameraPawn = Cast<ATacticalCameraPawn>(GetPawn()))

@@ -142,11 +142,47 @@ TargetPoint placed at (0,0,100).
 - **Zoom:** added `=`/`-` keyboard zoom (macOS trackpad has no scroll wheel) alongside MouseWheelAxis.
 - **Rotation already existed** (Q/E free orbit from Block G) — user was fine with it, no snap-rotate added.
 
+## Block I, phase 2 — Interact framework + rigged bookshelf — DONE
+**Two-stage proximity trap** (design locked with user, DESIGN_RATIONALE §6 rewritten): Interact
+**arms** a shelf (stage 1, costs the Action, Nameless must be in interact range); when a living
+**enemy** enters its AoE it **springs** (stage 2), crushing **every** living character in the
+blast — enemies, allies, and Nameless (physics is universal). Trigger is enemy-only (so arming
+from inside the blast doesn't self-detonate); damage hits everyone.
+- **`AInteractableActor`** (new class, `Public/Private Interactables/`): base for env objects.
+  `Mesh` (root) + `TriggerSphere` (USphereComponent) + `TriggerRadius`/`DamageEffect` (EditAnywhere,
+  designer data). `Arm()` (stage 1, virtual), `Detonate()` (stage 2), `OnSphereBeginOverlap` (the
+  future enemy-enter trigger), `GetDistanceToBody()` (helper). One-shot `bTriggered` latch.
+- **Detection is distance-to-**body**, not the origin sphere.** Both `Arm()`'s immediate sweep and
+  `Detonate()`'s victim list use `GetAllActorsOfClass(ABaseCharacter)` + `GetDistanceToBody() <=
+  TriggerRadius`. `GetDistanceToBody` = `Mesh->GetClosestPointOnCollision` (nearest surface point,
+  0 if inside), origin-distance fallback. This fixed BOTH: long-shelf coverage AND the crush not
+  depending on overlap-event tracking.
+- **Player:** `APlayerCharacter::TryInteract(AInteractableActor*)` — gate (PlayerTurn +
+  bActionAvailable) + range check (`GetDistanceToBody <= InteractRange`, default 200) + spend
+  Action + `Arm()`. Returns bool so a too-far click stays armed (walk closer, retry).
+- **Controller/modal input:** Interact reuses the `ArmedAbilityTag` machine via sentinel FName
+  `Action.Interact` (never a real GameplayTag — never reaches FireAbility). `OnMoveClicked` armed
+  branch: interact traces `ECC_Visibility` (shelf mesh blocks it, capsules don't) → cast
+  `AInteractableActor` → `TryInteract`; abilities still trace `ECC_Pawn`. Key **4** = `OnInteractPressed`.
+- **BUG fixed (stale armed state):** `ArmedAbilityTag` was never cleared between turns — a leftover
+  armed Interact/ability hijacked every click on later turns (player "couldn't do anything"). Fixed:
+  clear `ArmedAbilityTag = NAME_None` at the top of `OnCombatTurnStarted` (fires each turn-start).
+- **BP:** `BP_RiggedBookshelf` (Content/Interactables/) parented to `AInteractableActor`, Mesh =
+  shelf cube, DamageEffect = GE_HeavyStrike, TriggerRadius 300; replaced the `Shelf_Rigged_N/S`
+  placeholder cubes in TestLevel. **Interact button** added to WBP_CommandMenu (Arm Ability →
+  `Action.Interact`, same wiring as ability buttons).
+- **Verified:** arm from inside blast → immediate crush of the in-range enemy AND Nameless (925 HP),
+  confirming the physics rule.
+- **Known cosmetic quirk (deferred):** the `[Combat]` log reads "victim dealt N to victim" (self-
+  attribution) because the shelf has no ASC, so the spec is built from the victim's own ASC.
+  `AddSourceObject(this)` points to the shelf but the log reads the instigator. Fix later by routing
+  an instigator through the effect context; harmless.
+- **Trap is inert in normal play until enemy movement exists** — the enemy-enter spring needs enemies
+  to move (still-pending Block G item); today only the arm-time immediate sweep can fire it. The
+  herd→spring payoff lands with enemy movement + Intimidate displacement.
+
 ## Next Task
-**Block I, phase 2** — interactable-object framework + **Interact** command,
-Chapter 1 = rigged bookshelf (arm → crushes enemies in its AoE, a second damage source able to
-hit the status-immune boss) — the `Shelf_Rigged_N/S` cubes in TestLevel are the placeholder
-target. Then **Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
+**Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
 real terrain; retreat collides with walls/shelves/enemies per DESIGN_RATIONALE §6), then the
 deferred rename pass: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
 labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button
@@ -155,7 +191,8 @@ labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the E
 **Queued after that:** I2 (data architecture) → **H2** (progression — XP/leveling/Mana, see
 decision above) → J (AI/boss/balance).
 
-**Still pending from Block G** (queue whenever convenient): enemy movement; (later polish)
+**Still pending from Block G** (enemy movement is now a soft blocker — it's what makes the
+rigged-shelf trap and Intimidate herding actually matter in play): enemy movement; (later polish)
 drive decal size from MoveRange + show only on player's turn; optional cleanup of dead
 input/cursor code in APlayerCharacter; optional cleanup of now-unused
 `CycleTarget()`/`AllTargets`/`AddTarget`.
@@ -177,6 +214,9 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 - Local command-line builds: `-Log=/private/tmp/ANamelessWorld-UBT.log -NoUBA`.
 - NOTE: some older "Key Design Decisions" in CLAUDE.md (Protagonist kit, Basic/Heavy attacks) are **superseded** by the manipulation redesign — DESIGN_RATIONALE §6 is the source of truth.
 - **Character capsules don't block `ECC_Visibility`** — floor-clicks (`MoveClick`) rely on this so standing characters don't obstruct movement clicks. Any future click-to-target trace (Confuse, Interact, etc.) must use **`ECC_Pawn`** instead, not `ECC_Visibility`.
+- **`bGenerateOverlapEvents` defaults to FALSE** on C++-created primitive components — `GetOverlappingActors()` / begin-overlap silently return nothing until you call `SetGenerateOverlapEvents(true)`. Cost us the first rigged-shelf crush.
+- **Measure to the BODY, not the origin, for extended meshes.** A long shelf's origin is meters from its faces, so origin-distance range/AoE checks are wrong. Use `Mesh->GetClosestPointOnCollision(Point, Out)` (returns nearest-surface distance, 0 if inside) — see `AInteractableActor::GetDistanceToBody`.
+- **`ArmedAbilityTag` must be cleared each turn** (done in `OnCombatTurnStarted`) — a leftover armed ability/interact hijacks all clicks on later turns.
 - **Every level needs a `PlayerStart`.** Without one, GameMode falls back to spawning at the editor viewport's camera position (Selected Viewport play mode) — compounds into visible camera drift over repeated Play/Stop cycles in one editor session. `TestLevel` now has one; check new levels too.
 
 ## Session History
@@ -193,3 +233,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 26 | **Block G — modal-input state machine**: ArmedAbilityTag + ArmAbility on ATacticalPlayerController, FireAbilityAtTarget on APlayerCharacter, 1/2/3 hotkeys, WBP_CommandMenu rewired (arm-then-click-target, Cycle Target removed); fixed target-click trace (ECC_Visibility→ECC_Pawn); fixed unrelated PlayerStart-missing camera-drift bug. Scoped out tentative-move/undo (Larian-philosophy decision). Scoped in Block H2 (XP/leveling/Mana) for next session. **Known bug to fix first: Intimidate button tag typo.** | ◐ Block G in progress |
 | 27 | **Block H pt1** — retire player Basic Attack + Confuse rework (Provoke→Confuse: nearest-combatant targeting via FindNearestOtherCombatant, forced Heavy Strike, GA_BasicAttack gained a State.Confused Disadvantage check); fixed Intimidate/Embolden button tag typos. Reordered H2 after I2, deferred Intimidate pt2 + Block I until real terrain exists; locked concrete Intimidate mechanic in DESIGN_RATIONALE §6. | ✓ |
 | 28 | **Block I pt1** — library room greybox (walls/door/5 aisle rows/elevation stacks), combatants repositioned, capsule-Z fix; **turn-based camera focus** (establishing wide shot → FocusOn active combatant each turn via OnTurnStarted, bIsFocusing eased pan, +150 Z offset, =/− zoom keys); committed the long-pending BP_ character rename. | ◐ Block I in progress |
+| 29 | **Block I pt2** — Interact framework: `AInteractableActor` two-stage proximity trap (Arm→enemy-enter Spring→AoE crush hits everyone incl. Nameless), distance-to-body detection, `TryInteract` on player, Interact reuses modal `ArmedAbilityTag` via `Action.Interact` sentinel (key 4 + WBP button), `BP_RiggedBookshelf` in TestLevel. Fixed stale-armed-tag-between-turns bug; overlap-events + distance-to-body fixes for the crush. | ✓ |

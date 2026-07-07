@@ -65,4 +65,8 @@ private:
 
     UFUNCTION()
     void OnCombatTurnStarted(ABaseCharacter* ActiveCombatant);
+    
+    // Key 4 — arms Interact mode (sentinel tag Action.Interact). The next click
+    // rigs a bookshelf instead of targeting a character.
+    void OnInteractPressed();    
 };

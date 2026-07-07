@@ -10,6 +10,7 @@
 #include "APlayerCharacter.generated.h"
 
 class UDialogueComponent;
+class AInteractableActor;
 
 UCLASS()
 class ANAMELESSWORLD_API APlayerCharacter : public ABaseCharacter
@@ -70,6 +71,18 @@ public:
     // just sets CurrentTarget and calls the existing FireAbility().
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void FireAbilityAtTarget(const FName& TagName, ABaseCharacter* Target);
+
+    // How close Nameless must stand to rig an interactable, in cm (~200 ≈ 2 m).
+    // He physically arms it — no rigging a shelf from across the room.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Combat")
+    float InteractRange = 200.f;
+
+    // Interact command: rig the given object. Gated like every other action
+    // (PlayerTurn + Action stock) plus a range check. Returns true only if it
+    // actually armed (spent the Action) — the controller uses that to decide
+    // whether to un-arm Interact mode or let the player move closer and retry.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    bool TryInteract(AInteractableActor* Target);
 
     // Ends the player's turn — the explicit "I'm done" command the End Turn
     // button calls. Allowed any time during the player's own turn (stocks
