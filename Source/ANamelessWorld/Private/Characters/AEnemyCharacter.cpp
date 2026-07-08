@@ -8,6 +8,9 @@
 #include "Utilities/UCRPGCombatLibrary.h"
 #include "Attributes/UCRPGAttributeSet.h"
 #include "TimerManager.h"
+#include "AIController.h"
+#include "NavigationSystem.h"
+#include "NavigationPath.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -52,70 +55,188 @@ void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
 
 void AEnemyCharacter::PerformAITurn()
 {
-    // Guard: need a living target.
-    if (!PlayerTarget || !PlayerTarget->IsAlive()) return;
-
-    UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s takes their turn."), *GetName());
-
-    // ── Check State.Confused ───────────────────────────────────────────────
-    // If Confuse was used on this enemy, they attack the NEAREST living
-    // combatant (ally or boss, not necessarily the protagonist) with a
-    // forced Heavy Strike (the damage buff) — GA_BasicAttack itself applies
-    // the accuracy penalty (Disadvantage) automatically because State.Confused
-    // is set on this ASC.
+    // Decide this turn's target + which attack to use, then engage.
     UAbilitySystemComponent* MyASC = GetAbilitySystemComponent();
     const bool bIsConfused = MyASC && MyASC->HasMatchingGameplayTag(
         FGameplayTag::RequestGameplayTag(FName("State.Confused")));
 
     if (bIsConfused)
     {
-        ABaseCharacter* ConfusedTarget = FindNearestOtherCombatant();
-        if (ConfusedTarget)
+        // Confused: strike the NEAREST living combatant (ally/boss/anyone) with a
+        // forced Heavy Strike. GA_BasicAttack applies the Disadvantage itself.
+        PendingTarget = FindNearestOtherCombatant();
+        PendingAttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Heavy"));
+        if (PendingTarget)
         {
-            UE_LOG(LogTemp, Log,
-                TEXT("AEnemyCharacter: %s is Confused — attacking nearest combatant %s with a forced Heavy Strike."),
-                *GetName(), *ConfusedTarget->GetName());
-
-            FGameplayEventData Payload;
-            Payload.Target = ConfusedTarget;
-
-            SetIsAttacking(true);
-            UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-                this, FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Heavy")), Payload);
+            UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s is Confused — engaging nearest combatant %s."),
+                *GetName(), *PendingTarget->GetName());
         }
-        else
-        {
-            UE_LOG(LogTemp, Log,
-                TEXT("AEnemyCharacter: %s is Confused but no other living combatant to attack."),
-                *GetName());
-        }
+    }
+    else
+    {
+        // Normal: engage the player target, Basic/Heavy by roll.
+        PendingTarget = PlayerTarget;
+        const int32 AbilityRoll = FMath::RandRange(0, 99);
+        const bool bUseHeavy = (AbilityRoll < HeavyStrikeChance);
+        PendingAttackTag = bUseHeavy
+            ? FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Heavy"))
+            : FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Basic"));
 
+        UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s chose %s (roll %d, threshold %d)."),
+            *GetName(), bUseHeavy ? TEXT("Heavy Strike") : TEXT("Basic Attack"),
+            AbilityRoll, HeavyStrikeChance);
+    }
+
+    // No living target — skip the turn cleanly (still end it, or the turn stalls).
+    if (!PendingTarget || !PendingTarget->IsAlive())
+    {
+        UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s has no living target."), *GetName());
         EndTurnAfterDelay();
         return;
     }
 
-    // ── Normal turn: pick ability (Basic or Heavy) ─────────────────────────
-    const int32 AbilityRoll = FMath::RandRange(0, 99);
-    const bool bUseHeavy = (AbilityRoll < HeavyStrikeChance);
+    EngageTarget();
+}
 
-    FGameplayTag AttackTag = bUseHeavy
-        ? FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Heavy"))
-        : FGameplayTag::RequestGameplayTag(FName("Ability.Attack.Basic"));
+void AEnemyCharacter::EngageTarget()
+{
+    if (!PendingTarget) { EndTurnAfterDelay(); return; }
 
-    UE_LOG(LogTemp, Log,
-        TEXT("AEnemyCharacter: %s chose %s (roll %d, threshold %d)."),
-        *GetName(),
-        bUseHeavy ? TEXT("Heavy Strike") : TEXT("Basic Attack"),
-        AbilityRoll, HeavyStrikeChance);
+    const float Dist = FVector::Dist(GetActorLocation(), PendingTarget->GetActorLocation());
+    if (Dist <= AttackRange)
+    {
+        // Already in reach — strike where we stand, no movement.
+        AttackTarget();
+    }
+    else
+    {
+        // Out of reach — close the gap; the strike happens on arrival (Step 3).
+        UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s target %.0f away (> %.0f) — moving in."),
+            *GetName(), Dist, AttackRange);
+        MoveTowardTarget();
+    }
+}
+
+void AEnemyCharacter::AttackTarget()
+{
+    if (!PendingTarget || !PendingTarget->IsAlive()) { EndTurnAfterDelay(); return; }
 
     FGameplayEventData Payload;
-    Payload.Target = PlayerTarget;
+    Payload.Target = PendingTarget;
 
     SetIsAttacking(true);
-    UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-        this, AttackTag, Payload);
+    UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, PendingAttackTag, Payload);
 
     EndTurnAfterDelay();
+}
+
+// Walks along PathPoints and returns the location exactly MaxDistance into the
+// route (or the final point if the path is shorter). Used to clamp an enemy's
+// per-turn travel to its MoveRange.
+static FVector PointAlongPath(const TArray<FVector>& PathPoints, float MaxDistance)
+{
+    if (PathPoints.Num() == 0) return FVector::ZeroVector;
+
+    float Remaining = MaxDistance;
+    FVector Prev = PathPoints[0];
+    for (int32 i = 1; i < PathPoints.Num(); ++i)
+    {
+        const float Seg = FVector::Dist(Prev, PathPoints[i]);
+        if (Seg >= Remaining)
+        {
+            return Prev + (PathPoints[i] - Prev).GetSafeNormal() * Remaining;
+        }
+        Remaining -= Seg;
+        Prev = PathPoints[i];
+    }
+    return PathPoints.Last();   // budget exceeds the whole path — go to its end
+}
+
+void AEnemyCharacter::MoveTowardTarget()
+{
+    AAIController* AICon = Cast<AAIController>(GetController());
+    if (!AICon)
+    {
+        UE_LOG(LogTemp, Warning,
+            TEXT("AEnemyCharacter: %s has no AIController — can't move. Set AutoPossessAI on its Blueprint."),
+            *GetName());
+        EndTurnAfterDelay();
+        return;
+    }
+
+    // Get the actual walking route to the target (routed around walls/shelves).
+    UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+    UNavigationPath* Path = NavSys ? NavSys->FindPathToLocationSynchronously(
+        GetWorld(), GetActorLocation(), PendingTarget->GetActorLocation(), this) : nullptr;
+
+    if (!Path || !Path->IsValid() || Path->PathPoints.Num() < 2)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AEnemyCharacter: %s could not path to %s — ending turn."),
+            *GetName(), *PendingTarget->GetName());
+        EndTurnAfterDelay();
+        return;
+    }
+
+    // Stop a margin INSIDE attack range, not at its edge. MoveToLocation halts
+    // within its acceptance radius, so aiming for the exact 200-line leaves the
+    // enemy tens of cm short and perpetually just-out-of-range. Half the range in
+    // gives slack that the acceptance wobble can't eat.
+    const float StopDistance = AttackRange * 0.5f;
+    const float StopShortOfTarget = FMath::Max(0.f, Path->GetPathLength() - StopDistance);
+    const float TravelDist = FMath::Min(MoveRange, StopShortOfTarget);
+
+    FVector Dest = PointAlongPath(Path->PathPoints, TravelDist);
+
+    // Snap onto the navmesh so we never aim just off it (grinds against walls).
+    FNavLocation Projected;
+    if (NavSys->ProjectPointToNavigation(Dest, Projected, FVector(150.f, 150.f, 300.f)))
+    {
+        Dest = Projected.Location;
+    }
+    
+    if (!AICon->ReceiveMoveCompleted.IsAlreadyBound(this, &AEnemyCharacter::OnMoveCompleted))
+    {
+        AICon->ReceiveMoveCompleted.AddDynamic(this, &AEnemyCharacter::OnMoveCompleted);
+    }
+
+    const EPathFollowingRequestResult::Type MoveResult = AICon->MoveToLocation(Dest, 50.f);
+
+    if (MoveResult == EPathFollowingRequestResult::Failed)
+    {
+        EndTurnAfterDelay();
+    }
+    else if (MoveResult == EPathFollowingRequestResult::AlreadyAtGoal)
+    {
+        // Reached the clamped point instantly — run the same arrival check.
+        OnMoveCompleted(FAIRequestID::CurrentRequest, EPathFollowingResult::Success);
+    }
+    // RequestSuccessful: the walk is underway; OnMoveCompleted finishes the turn.
+}
+
+void AEnemyCharacter::OnMoveCompleted(FAIRequestID RequestID, EPathFollowingResult::Type Result)
+{
+    // Resolve once — stop listening so a stray second broadcast can't run the
+    // attack (or end-turn) twice. MoveTowardTarget rebinds next turn.
+    if (AAIController* AICon = Cast<AAIController>(GetController()))
+    {
+        AICon->ReceiveMoveCompleted.RemoveDynamic(this, &AEnemyCharacter::OnMoveCompleted);
+    }
+        
+    // Walk finished (arrived, blocked, or aborted). Re-check range: if we made it
+    // into striking distance, attack; otherwise the turn's just over.
+    if (PendingTarget && PendingTarget->IsAlive()
+        && FVector::Dist(GetActorLocation(), PendingTarget->GetActorLocation()) <= AttackRange)
+    {
+        UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s reached %s — striking."),
+            *GetName(), *PendingTarget->GetName());
+        AttackTarget();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("AEnemyCharacter: %s ended movement out of range — turn over."),
+            *GetName());
+        EndTurnAfterDelay();
+    }
 }
 
 ABaseCharacter* AEnemyCharacter::FindNearestOtherCombatant() const

@@ -178,8 +178,7 @@ from inside the blast doesn't self-detonate); damage hits everyone.
   `AddSourceObject(this)` points to the shelf but the log reads the instigator. Fix later by routing
   an instigator through the effect context; harmless.
 - **Trap is inert in normal play until enemy movement exists** — the enemy-enter spring needs enemies
-  to move (still-pending Block G item); today only the arm-time immediate sweep can fire it. The
-  herd→spring payoff lands with enemy movement + Intimidate displacement.
+  to move; today only the arm-time immediate sweep can fire it. *(Now unblocked — see enemy movement.)*
 
 ## Turn-start intermission — DONE
 Enemies no longer act the instant their turn starts (the swing used to fire while the camera was
@@ -193,13 +192,62 @@ settles during the beat, then the enemy acts.
   playtest, add a lightweight "ignore clicks until focus finishes" gate in the controller using the
   camera pawn's existing `bIsFocusing` flag — NOT a blanket timer. 2-line follow-up, only if needed.
 
-## Next Task
-**Enemy movement FIRST** (user reprioritized — moved ahead of the new ability): enemies
-currently attack from wherever they stand and never path. Movement is the soft blocker that
-gives the rigged-shelf trap (enemy-enter spring) AND Intimidate's displacement something real
-to act on, so it comes before the ability work.
+## Enemy movement — DONE
+Enemies now path toward their target and only strike when close, capped to a per-turn budget.
+Flow (all in `AEnemyCharacter`, after the turn-start intermission): `PerformAITurn` picks
+`PendingTarget` + `PendingAttackTag` (confused → nearest combatant / forced Heavy; else PlayerTarget
+/ Basic-Heavy roll) → `EngageTarget()` range-checks: in `AttackRange` (EditAnywhere, 200) → `AttackTarget()`
+in place (no retreat); else `MoveTowardTarget()`.
+- **Async move → arrival callback.** `MoveToActor`/`MoveToLocation` finish over many frames, so we
+  can't `Move();Attack();`. Bind the AIController's `ReceiveMoveCompleted` → `OnMoveCompleted` re-checks
+  range and either `AttackTarget()` or ends the turn. Requires enemies be **AI-possessed**
+  (BP_Enemy/BP_Boss: AutoPossessAI = Placed in World or Spawned, AIControllerClass = AIController).
+- **Per-turn MoveRange cap** (`ABaseCharacter::MoveRange`, 500): compute the nav path
+  (`FindPathToLocationSynchronously`), then `PointAlongPath()` (file-static helper) picks the point
+  `min(MoveRange, PathLength − StopDistance)` along it and `MoveToLocation`s there. Enemy within
+  `MoveRange + StopDistance` (~600) reaches and strikes in one turn; farther ones chip in over turns.
+- **Stop INSIDE AttackRange, not at its edge.** `StopDistance = AttackRange * 0.5` (≈100). Aiming at
+  the exact 200-line failed: `MoveToLocation` halts within its acceptance radius (50), leaving the
+  enemy ~250 out and perpetually just-out-of-range. Half-range-in gives slack the wobble can't eat.
+- **Bind-once + unbind-on-complete.** `IsAlreadyBound` guard on bind; `RemoveDynamic` at the top of
+  `OnMoveCompleted` so a stray second broadcast can't fire the attack twice (would double-hit once in range).
+- **MoveToActor/MoveToLocation return value matters** — only `RequestSuccessful` fires the callback;
+  `Failed`/`AlreadyAtGoal` are resolved inline or the turn hangs forever.
+- **Graceful degrade:** no AIController → warn + end turn (don't stall).
+- **Verified:** enemy at ~300 and boss at ~560 both walked in and struck; confused enemies path to
+  the nearest combatant the same way. Enemy movement now makes the rigged-shelf enemy-enter spring live.
 
-**Then Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
+## Character-vs-character avoidance — DONE (Plan B, after a long detour)
+Movers now path AROUND other characters (enemies AND Nameless), crisply. This ate a big chunk of the
+session — RVO and Detour Crowd both failed/janked; the working answer is **per-turn nav obstacles**:
+- Every character is a **dynamic navmesh obstacle** (`GetCapsuleComponent()->bDynamicObstacle=true` +
+  `SetCanEverAffectNavigation(true)` in `ABaseCharacter::BeginPlay`; needs Runtime Generation=**Dynamic**).
+- **The mover excludes itself:** `UTurnManager::BeginTurn` calls `ABaseCharacter::SetNavObstacleEnabled`
+  — everyone carves EXCEPT the active combatant. So the mover never routes around (or churns on) its
+  own footprint, and the carvers are all stationary → the navmesh is stable during the walk (no wiggle).
+  The obstacle flip settles during the turn intermission / player think-time before anyone moves.
+- **Enemies use plain `AIController`** (NOT the crowd controller — this is a pathing fix, not steering).
+- **`MoveTowardTarget` projects its clamped destination** onto the navmesh (`ProjectPointToNavigation`)
+  so it never aims at a just-off-mesh point and grinds a wall.
+- **HUGE gotcha (cost hours):** dynamic-navmesh obstacle changes **don't apply until a full compile +
+  fresh PIE** — Live Coding / half-restart leaves the nav data stale, so it *looks* like the obstacles
+  aren't carving. When nav/obstacle behaviour looks wrong, FULL RESTART before trusting it.
+- **`AEnemyAIController`** (Public/Private **AI/**, Detour Crowd via `UCrowdFollowingComponent`) still
+  exists in the project but is **currently unused** (crowd approach abandoned). Safe to delete later.
+
+## Rigged-bookshelf walk-in trigger — FIXED (deterministic poll, not overlap)
+The enemy-enter spring never fired via physics: `OnSphereBeginOverlap` needs both the sphere AND the
+capsule to generate overlap events, and the `TriggerSphere` (attached to the non-uniformly scaled shelf
+mesh) had its radius collapsed to ~30% by inherited scale. Two physics fixes (capsule overlap events;
+`SetUsingAbsoluteScale(true)` on the sphere) still didn't work reliably. **Replaced overlap with a
+deterministic poll:** `Arm()` starts a 0.15s repeating `ProximityTimerHandle` → `CheckProximity()` does
+the same `GetAllActorsOfClass` + `GetDistanceToBody <= TriggerRadius` sweep as the arm-time check;
+`Detonate()` clears the timer. No collision channels / overlap events / component scale involved →
+reliable. Verified: arm empty, enemy paths in, `crushed` on entry. (Sphere + `OnSphereBeginOverlap`
+now dormant — can be deleted later.)
+
+## Next Task
+**Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
 real terrain; retreat collides with walls/shelves/enemies per DESIGN_RATIONALE §6), then the
 deferred rename pass: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
 labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button
@@ -208,9 +256,8 @@ labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the E
 **Queued after that:** I2 (data architecture) → **H2** (progression — XP/leveling/Mana, see
 decision above) → J (AI/boss/balance).
 
-**Still pending from Block G** (enemy movement is now a soft blocker — it's what makes the
-rigged-shelf trap and Intimidate herding actually matter in play): enemy movement; (later polish)
-drive decal size from MoveRange + show only on player's turn; optional cleanup of dead
+**Still pending from Block G** (later polish): drive decal size from MoveRange + show only on
+player's turn; optional cleanup of dead
 input/cursor code in APlayerCharacter; optional cleanup of now-unused
 `CycleTarget()`/`AllTargets`/`AddTarget`.
 
@@ -234,6 +281,11 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 - **`bGenerateOverlapEvents` defaults to FALSE** on C++-created primitive components — `GetOverlappingActors()` / begin-overlap silently return nothing until you call `SetGenerateOverlapEvents(true)`. Cost us the first rigged-shelf crush.
 - **Measure to the BODY, not the origin, for extended meshes.** A long shelf's origin is meters from its faces, so origin-distance range/AoE checks are wrong. Use `Mesh->GetClosestPointOnCollision(Point, Out)` (returns nearest-surface distance, 0 if inside) — see `AInteractableActor::GetDistanceToBody`.
 - **`ArmedAbilityTag` must be cleared each turn** (done in `OnCombatTurnStarted`) — a leftover armed ability/interact hijacks all clicks on later turns.
+- **AIController move is async — sequence via `ReceiveMoveCompleted`, never `Move();Attack();`.** Bind once (`IsAlreadyBound`) and `RemoveDynamic` on completion (a double broadcast = double attack). Check the `MoveTo*` return: only `RequestSuccessful` fires the callback; `Failed`/`AlreadyAtGoal` must be resolved inline or the turn hangs. A pawn needs AutoPossessAI set to have an AIController at all.
+- **`MoveToLocation` stops within its acceptance radius**, so aim a margin INSIDE the target distance, not at the exact edge, or the agent parks just short forever (bit the enemy AttackRange approach).
+- **Dynamic-navmesh obstacle changes need a FULL compile + fresh PIE to apply** — Live Coding / half-restart leaves the nav data stale, so obstacles that ARE registered (logs confirm the flags) still won't carve. When nav/obstacle behaviour looks wrong, full-restart before debugging further. Cost hours this session.
+- **Character avoidance = per-turn nav obstacles, mover excluded** (`SetNavObstacleEnabled`, toggled in `UTurnManager::BeginTurn`): everyone carves except the active combatant. RVO and Detour Crowd were both tried and abandoned. `AEnemyAIController` (crowd) exists but is unused.
+- **A shape component attached to a non-uniformly scaled parent inherits that scale** — a sphere collapses to `radius × min(scale)`. Use `SetUsingAbsoluteScale(true)`. (Also: for a turn-based env trigger, a deterministic distance poll beats physics overlap events — see the rigged shelf's `CheckProximity`.)
 - **Every level needs a `PlayerStart`.** Without one, GameMode falls back to spawning at the editor viewport's camera position (Selected Viewport play mode) — compounds into visible camera drift over repeated Play/Stop cycles in one editor session. `TestLevel` now has one; check new levels too.
 
 ## Session History
@@ -250,4 +302,6 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 26 | **Block G — modal-input state machine**: ArmedAbilityTag + ArmAbility on ATacticalPlayerController, FireAbilityAtTarget on APlayerCharacter, 1/2/3 hotkeys, WBP_CommandMenu rewired (arm-then-click-target, Cycle Target removed); fixed target-click trace (ECC_Visibility→ECC_Pawn); fixed unrelated PlayerStart-missing camera-drift bug. Scoped out tentative-move/undo (Larian-philosophy decision). Scoped in Block H2 (XP/leveling/Mana) for next session. **Known bug to fix first: Intimidate button tag typo.** | ◐ Block G in progress |
 | 27 | **Block H pt1** — retire player Basic Attack + Confuse rework (Provoke→Confuse: nearest-combatant targeting via FindNearestOtherCombatant, forced Heavy Strike, GA_BasicAttack gained a State.Confused Disadvantage check); fixed Intimidate/Embolden button tag typos. Reordered H2 after I2, deferred Intimidate pt2 + Block I until real terrain exists; locked concrete Intimidate mechanic in DESIGN_RATIONALE §6. | ✓ |
 | 28 | **Block I pt1** — library room greybox (walls/door/5 aisle rows/elevation stacks), combatants repositioned, capsule-Z fix; **turn-based camera focus** (establishing wide shot → FocusOn active combatant each turn via OnTurnStarted, bIsFocusing eased pan, +150 Z offset, =/− zoom keys); committed the long-pending BP_ character rename. | ◐ Block I in progress |
-| 29 | **Block I pt2** — Interact framework: `AInteractableActor` two-stage proximity trap (Arm→enemy-enter Spring→AoE crush hits everyone incl. Nameless), distance-to-body detection, `TryInteract` on player, Interact reuses modal `ArmedAbilityTag` via `Action.Interact` sentinel (key 4 + WBP button), `BP_RiggedBookshelf` in TestLevel. Fixed stale-armed-tag-between-turns bug; overlap-events + distance-to-body fixes for the crush. | ✓ |
+| 29 | **Block I pt2** — Interact framework: `AInteractableActor` two-stage proximity trap (Arm→enemy-enter Spring→AoE crush hits everyone incl. Nameless), distance-to-body detection, `TryInteract` on player, Interact reuses modal `ArmedAbilityTag` via `Action.Interact` sentinel (key 4 + WBP button), `BP_RiggedBookshelf` in TestLevel. Fixed stale-armed-tag-between-turns bug; overlap-events + distance-to-body fixes for the crush. Turn-start intermission (enemies wait for camera before acting). | ✓ |
+| 30 | **Enemy movement** — AttackRange gate + capped pathing + arrival callback: `PerformAITurn`→`EngageTarget` (in range → strike, else `MoveTowardTarget`), AIController `MoveToLocation` to a `PointAlongPath` point clamped to `MoveRange`, `OnMoveCompleted` re-checks range → strike/end. Fixes: stop inside AttackRange (acceptance-radius undershoot), bind-once+unbind (double-attack guard), MoveTo return-value handling. Enemy BPs set AutoPossessAI. Unblocks the shelf enemy-enter spring. | ✓ |
+| 31 | **Character avoidance + trap trigger** — per-turn nav obstacles (every character carves the navmesh except the active mover, via `SetNavObstacleEnabled` in `BeginTurn`; Runtime Generation=Dynamic; dest projected to navmesh) so movers path around each other crisply; abandoned RVO/Crowd. Rigged-shelf walk-in trigger switched from unreliable physics overlap to a 0.15s `CheckProximity` poll. Long session — the nav-obstacle "needs a full restart to apply" gotcha cost hours. | ✓ |

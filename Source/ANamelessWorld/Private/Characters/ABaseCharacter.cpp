@@ -23,6 +23,9 @@
 // These headers do not exist yet. Until they are written, the components below
 // are created with a stub placeholder comment.
 
+#include "GameFramework/CharacterMovementComponent.h"
+
+#include "Components/CapsuleComponent.h"
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTRUCTOR
@@ -74,6 +77,11 @@ ABaseCharacter::ABaseCharacter()
     // every frame. We do not need per-frame updates — GAS and turn logic handle
     // timing. Disabling tick improves performance, especially with many characters.
     PrimaryActorTick.bCanEverTick = false;
+
+    // Let environmental trigger spheres (e.g. the rigged bookshelf) detect us
+    // walking in. Overlap events fire only if BOTH sides generate them — the
+    // shelf's sphere already does; the capsule doesn't by default.
+    GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 }
 
 
@@ -104,12 +112,30 @@ void ABaseCharacter::BeginPlay()
     // ACharacter::BeginPlay() does important internal setup we must not skip.
     Super::BeginPlay();
 
+    // Register each character as a dynamic navmesh obstacle so OTHERS path around
+    // them. Must be here, not the constructor — at construction the capsule isn't
+    // registered with the world/nav system yet, so this silently no-ops there.
+    // The TurnManager toggles it off for whoever's moving (see SetNavObstacleEnabled).
+    GetCapsuleComponent()->bDynamicObstacle = true;
+    GetCapsuleComponent()->SetCanEverAffectNavigation(true);
+
     // Initialise attributes first — we need valid stat values before granting
     // abilities (some ability costs reference Mana, which must exist).
     InitDefaultAttributes();
 
     // Then grant abilities so they can reference the now-initialised stats.
     InitDefaultAbilities();
+}
+
+
+void ABaseCharacter::SetNavObstacleEnabled(bool bEnabled)
+{
+    if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+    {
+        // SetCanEverAffectNavigation only dirties the navmesh when the value
+        // actually changes, so calling this every turn is cheap.
+        Capsule->SetCanEverAffectNavigation(bEnabled);
+    }
 }
 
 

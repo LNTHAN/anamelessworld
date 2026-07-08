@@ -262,6 +262,16 @@ void UTurnManager::BeginTurn()
     // Fresh turn → refill this combatant's Move + Action stocks.
     ActiveCharacter->ResetTurnResources();
 
+    // Nav-avoidance: everyone carves the navmesh so others path AROUND them —
+    // EXCEPT whoever's turn it is, so the mover doesn't route around (or churn
+    // on) its own footprint. The change settles during the turn intermission /
+    // the player's think-time, before anyone actually moves.
+    for (ABaseCharacter* Combatant : Combatants)
+    {
+        if (Combatant) Combatant->SetNavObstacleEnabled(true);
+    }
+    ActiveCharacter->SetNavObstacleEnabled(false);
+
     // Determine whose turn it is.
     // APlayerCharacter will override a function we check here — for now we use
     // a simple tag check. IsPlayerControlled() returns true for the player pawn.

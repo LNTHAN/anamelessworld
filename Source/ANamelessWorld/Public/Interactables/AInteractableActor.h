@@ -39,6 +39,11 @@ public:
 protected:
     virtual void BeginPlay() override;
 
+    // Deterministic proximity trigger. Physics overlap events proved unreliable
+    // for the trap, so while armed we poll for a living enemy entering range.
+    void CheckProximity();
+    FTimerHandle ProximityTimerHandle;
+
     // STAGE 2 — springs the trap: crushes EVERY living character currently inside
     // the AoE (enemies, allies, and Nameless alike), then latches so it can never
     // fire again.

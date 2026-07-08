@@ -6,6 +6,7 @@
 #include "Characters/ABaseCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 
 AInteractableActor::AInteractableActor()
 {
@@ -21,6 +22,7 @@ AInteractableActor::AInteractableActor()
     // finalised in BeginPlay from TriggerRadius.
     TriggerSphere = CreateDefaultSubobject<USphereComponent>(TEXT("TriggerSphere"));
     TriggerSphere->SetupAttachment(Mesh);
+    TriggerSphere->SetUsingAbsoluteScale(true); // ignore mesh scale, keep the AoE radius constant
     TriggerSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     TriggerSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
     TriggerSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
@@ -61,9 +63,21 @@ void AInteractableActor::Arm()
     bArmed = true;
     UE_LOG(LogTemp, Log, TEXT("AInteractableActor: %s ARMED."), *GetName());
 
-    // Begin-overlap only fires on ENTRY, so an enemy already standing in range
-    // at arm-time wouldn't trip it. Check current occupants (by body-distance,
-    // not the origin sphere) and spring immediately if a living enemy is inside.
+    // Detonate now if an enemy is already in range; otherwise poll for one to
+    // walk in. A light repeating distance check (the overlap-event path was
+    // unreliable) — it stops itself the moment the trap springs.
+    CheckProximity();
+    if (bArmed && !bTriggered)
+    {
+        GetWorldTimerManager().SetTimer(ProximityTimerHandle, this,
+            &AInteractableActor::CheckProximity, 0.15f, true);
+    }
+}
+
+void AInteractableActor::CheckProximity()
+{
+    if (!bArmed || bTriggered) return;
+
     TArray<AActor*> Everyone;
     UGameplayStatics::GetAllActorsOfClass(this, ABaseCharacter::StaticClass(), Everyone);
     for (AActor* A : Everyone)
@@ -100,6 +114,8 @@ void AInteractableActor::Detonate()
     if (bTriggered) return;                // one-shot guard
     bTriggered = true;
     bArmed = false;
+
+    GetWorldTimerManager().ClearTimer(ProximityTimerHandle);
 
     // Stop detecting further entries — the shelf is down.
     TriggerSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);

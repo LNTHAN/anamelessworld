@@ -158,7 +158,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Turn")
     void ResetTurnResources();
 
-    
+    // Enables/disables this character carving the navmesh as an obstacle. The
+    // TurnManager switches it OFF for whoever's moving and ON for everyone else,
+    // so movers route around standing characters but never around themselves.
+    void SetNavObstacleEnabled(bool bEnabled);
+
+
 protected:
 
     // ── GAS Core Components ──────────────────────────────────────────────────
