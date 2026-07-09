@@ -276,15 +276,35 @@ Blueprint decides how it LOOKS**, via `BlueprintImplementableEvent`s the C++ fir
 - **Fall toward the triggering enemy** (compute `ToppleSign` in `BeginDetonation`, multiply the topple angle).
 - Swap greybox cube for a real **bookshelf model** (topple animation + pivot already carry over).
 
-## Next Task
-**Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
-real terrain; retreat collides with walls/shelves/enemies per DESIGN_RATIONALE §6), then the
-deferred rename pass: `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse`, command-menu button
-labels/Tag Names for both Confuse and the reworked Intimidate, hide/remove the Embolden button
-(deferred to Chapter 2 per DESIGN_RATIONALE §6).
+## Block H, part 2 — Intimidate displacement + Confuse rename — DONE
+**Intimidate reworked** from single-target stun to **AoE fear / forced displacement** (`GA_Intimidate`,
+DESIGN_RATIONALE §6): on cast, every living enemy within `IntimidateRadius` (EditDefaultsOnly, ~300 after
+tuning; 600 was too wide) rolls INT-vs-WIS; each failer is flung straight **away from Nameless** up to its
+own `MoveRange` via a capsule `SweepSingleByChannel(ECC_Pawn)` (ignores caster + self). Stops at the first
+solid hit; **impact damage** (`DamageEffect` = GE_DamageInstant) on any terrain/enemy hit, **mutual damage**
+if it slams another enemy. Nameless excluded from the sweep (no backdoor damage). **Enemies flung into a
+rigged shelf's AoE → detonation** (the herd-into-hazard combo). Two-phase closest-first ordering was
+considered for reliable enemy-vs-enemy billiards but NOT applied — the real cases work (both-in-AoE scatter;
+one flung into a stationary out-of-AoE enemy = reliable mutual damage). Instant teleport for now; smooth
+panic-slide + dust VFX + fall-over anim are a deferred juice pass (logic-first, same as the shelf).
+- **Confuse rename** (deferred pass): tag `Ability.Debuff.Provoke` → `Ability.Debuff.Confuse` (config +
+  `+GameplayTagRedirects` so old refs resolve — **gameplay tags only reload on a FULL editor restart**,
+  bit us). Hotkey 3 → Confuse. WBP_CommandMenu: Provoke button relabeled "Confuse" + tag; **Embolden button
+  hidden** (Collapsed, deferred to Ch2). Assets `BP_GA_Provoke`/`GE_Provoke` kept as legacy filenames.
+- **Confuse now lasts 1 turn** (was forever/OP): `GE_Provoke` → **Infinite** duration; `AEnemyCharacter::EndTurnNow`
+  strips it via `RemoveActiveEffectsWithGrantedTags(State.Confused)` after the confused turn resolves (removed
+  at turn-END so the Disadvantage attack still sees the tag).
+- **Characters face their target when attacking**: `ABaseCharacter::FaceActor(AActor*)` (instant horizontal
+  SetActorRotation), called in `AEnemyCharacter::AttackTarget` and `APlayerCharacter::FireAbility` before the send.
 
-**Queued after that:** I2 (data architecture) → **H2** (progression — XP/leveling/Mana, see
-decision above) → J (AI/boss/balance).
+## Deferred — turn-based status-duration SYSTEM (for variable-turn statuses)
+Confuse is hardcoded to 1 turn. Making statuses last **N turns** (Confuse 2, Stun 1, etc.) needs a small
+turn-counting SYSTEM (not just data) — e.g. TurnManager ticks active turn-statuses down each round, removes at 0.
+The per-status **number** is data → build this WITH **I2** so durations are data-driven from the start.
+
+## Next Task
+**I2 — data architecture** (DataTables/CSV for ability + character stats), then **H2** (progression —
+XP/leveling/Mana), then **J** (AI/boss/balance). Build the turn-based status-duration system alongside I2.
 
 **Still pending from Block G** (later polish): drive decal size from MoveRange + show only on
 player's turn; optional cleanup of dead
@@ -313,6 +333,8 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 - **`ArmedAbilityTag` must be cleared each turn** (done in `OnCombatTurnStarted`) — a leftover armed ability/interact hijacks all clicks on later turns.
 - **AIController move is async — sequence via `ReceiveMoveCompleted`, never `Move();Attack();`.** Bind once (`IsAlreadyBound`) and `RemoveDynamic` on completion (a double broadcast = double attack). Check the `MoveTo*` return: only `RequestSuccessful` fires the callback; `Failed`/`AlreadyAtGoal` must be resolved inline or the turn hangs. A pawn needs AutoPossessAI set to have an AIController at all.
 - **`MoveToLocation` stops within its acceptance radius**, so aim a margin INSIDE the target distance, not at the exact edge, or the agent parks just short forever (bit the enemy AttackRange approach).
+- **Gameplay tags load ONCE at editor-process startup** — editing DefaultGameplayTags.ini (rename/add/redirect) needs a FULL app quit + relaunch to show; a recompile/Live Coding/level reopen won't do it. Use `+GameplayTagRedirects=(OldTagName=..,NewTagName=..)` so existing refs survive a rename.
+- **Turn-based status removal**: for "lasts N turns", strip the tag manually (`ASC->RemoveActiveEffectsWithGrantedTags(...)`) at turn-END, with the GE set to **Infinite** duration — NOT a real-time GE timer (fragile in turn-based). Confuse uses this (1 turn). A general N-turn duration system is deferred (see Deferred section).
 - **Dynamic-navmesh obstacle changes need a FULL compile + fresh PIE to apply** — Live Coding / half-restart leaves the nav data stale, so obstacles that ARE registered (logs confirm the flags) still won't carve. When nav/obstacle behaviour looks wrong, full-restart before debugging further. Cost hours this session.
 - **Character avoidance = per-turn nav obstacles, mover excluded** (`SetNavObstacleEnabled`, toggled in `UTurnManager::BeginTurn`): everyone carves except the active combatant. RVO and Detour Crowd were both tried and abandoned. `AEnemyAIController` (crowd) exists but is unused.
 - **A shape component attached to a non-uniformly scaled parent inherits that scale** — a sphere collapses to `radius × min(scale)`. Use `SetUsingAbsoluteScale(true)`. (Also: for a turn-based env trigger, a deterministic distance poll beats physics overlap events — see the rigged shelf's `CheckProximity`.)
@@ -336,3 +358,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 30 | **Enemy movement** — AttackRange gate + capped pathing + arrival callback: `PerformAITurn`→`EngageTarget` (in range → strike, else `MoveTowardTarget`), AIController `MoveToLocation` to a `PointAlongPath` point clamped to `MoveRange`, `OnMoveCompleted` re-checks range → strike/end. Fixes: stop inside AttackRange (acceptance-radius undershoot), bind-once+unbind (double-attack guard), MoveTo return-value handling. Enemy BPs set AutoPossessAI. Unblocks the shelf enemy-enter spring. | ✓ |
 | 31 | **Character avoidance + trap trigger** — per-turn nav obstacles (every character carves the navmesh except the active mover, via `SetNavObstacleEnabled` in `BeginTurn`; Runtime Generation=Dynamic; dest projected to navmesh) so movers path around each other crisply; abandoned RVO/Crowd. Rigged-shelf walk-in trigger switched from unreliable physics overlap to a 0.15s `CheckProximity` poll. Long session — the nav-obstacle "needs a full restart to apply" gotcha cost hours. | ✓ |
 | 32 | **Juice pass — rigged shelf detonation**: telegraph sequence (freeze enemy → "!!" beat → crush), C++ camera shake on the tactical rig (`TriggerShake`, PlayerCameraManager shakes don't work on it), topple Timeline with a base-hinge `Pivot` component + `OnConstruction` WYSIWYG lift, directional (front/back) blast rectangle. `BlueprintImplementableEvent` `OnDetonated`/`OnTelegraph` = C++-decides-when, BP-decides-look. | ✓ |
+| 33 | **Block H pt2** — Intimidate reworked to AoE fear/displacement (roll → fling away from Nameless via ECC_Pawn capsule sweep → impact + mutual damage → herd into rigged shelves); Provoke→Confuse rename (tag + redirect + button + Embolden hidden); Confuse now 1 turn (Infinite GE stripped in EndTurnNow); characters `FaceActor` their target before attacking. | ✓ |

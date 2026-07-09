@@ -135,7 +135,7 @@ void ATacticalPlayerController::OnAbilityTwoPressed()
 
 void ATacticalPlayerController::OnAbilityThreePressed()
 {
-    ArmAbility(FName("Ability.Debuff.Provoke"));
+    ArmAbility(FName("Ability.Debuff.Confuse"));
 }
 
 void ATacticalPlayerController::OnInteractPressed()

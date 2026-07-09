@@ -8,6 +8,8 @@
 #include "Characters/ABaseCharacter.h"
 #include "Utilities/UCRPGCombatLibrary.h"
 #include "Attributes/UCRPGAttributeSet.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/CapsuleComponent.h"
 
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -30,133 +32,136 @@ void UGA_Intimidate::ActivateAbility(
     const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
-    // ── Step 1: Commit ─────────────────────────────────────────────────────
     if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
     {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_Intimidate: CommitAbility failed — not enough Mana or on cooldown."));
+        UE_LOG(LogTemp, Warning, TEXT("GA_Intimidate: CommitAbility failed."));
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
 
-    // ── Step 2: Find the target enemy ─────────────────────────────────────
-    if (!TriggerEventData || !TriggerEventData->Target)
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_Intimidate: No target in TriggerEventData."));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    const ABaseCharacter* TargetCharacter =
-        Cast<ABaseCharacter>(TriggerEventData->Target);
-
-    if (!TargetCharacter || !TargetCharacter->IsAlive())
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_Intimidate: Target is not a living ABaseCharacter."));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    // ── Step 3: Contested roll — INT vs target WIS DC ─────────────────────
-    // The protagonist's INT modifier sets how hard it is to resist.
-    // The target's WIS modifier sets the DC they need to beat.
-    // If the protagonist's roll meets or beats the DC, the stun lands.
-
-    UAbilitySystemComponent* TargetASC =
-        TargetCharacter->GetAbilitySystemComponent();
-
-    if (!TargetASC)
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_Intimidate: Target has no AbilitySystemComponent."));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        return;
-    }
-
-    // Get protagonist's INT modifier from their AttributeSet.
-    const UCRPGAttributeSet* CasterAttributes = Cast<UCRPGAttributeSet>(
-        ActorInfo->AvatarActor->FindComponentByClass<UAbilitySystemComponent>()
-            ->GetAttributeSet(UCRPGAttributeSet::StaticClass()));
-
-    // Get target's WIS modifier to build the DC.
-    const UCRPGAttributeSet* TargetAttributes = Cast<UCRPGAttributeSet>(
-        TargetASC->GetAttributeSet(UCRPGAttributeSet::StaticClass()));
-
-    if (!CasterAttributes || !TargetAttributes)
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("GA_Intimidate: Could not read AttributeSets. Ending ability."));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    const int32 INTModifier = UCRPGCombatLibrary::GetModifier(
-        CasterAttributes->GetIntelligence());
-
-    const int32 WisdomDC = UCRPGCombatLibrary::CalculateDC(
-        UCRPGCombatLibrary::GetModifier(TargetAttributes->GetWisdom()));
-
-    // Roll d20 + INT modifier and compare to the target's WIS DC.
-    const int32 RawRoll = UCRPGCombatLibrary::RollD20();
-    const int32 FinalRoll = RawRoll + INTModifier;
-
-    UE_LOG(LogTemp, Log,
-        TEXT("GA_Intimidate: Rolled %d + %d (INT) = %d vs DC %d."),
-        RawRoll, INTModifier, FinalRoll, WisdomDC);
-
+    // The fear radiates from Nameless.
     ABaseCharacter* Caster = Cast<ABaseCharacter>(GetAvatarActorFromActorInfo());
-    if (Caster) Caster->SetIsAttacking(true);
-
-    if (FinalRoll >= WisdomDC)
+    UWorld* World = Caster ? Caster->GetWorld() : nullptr;
+    if (!Caster || !World)
     {
-        // Success — apply the stun.
-        if (IntimidateEffectClass)
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+        return;
+    }
+
+    // Caster's INT modifier — how hard the fear is to resist. Read once.
+    int32 INTModifier = 0;
+    if (UAbilitySystemComponent* CasterASC = Caster->GetAbilitySystemComponent())
+    {
+        if (const UCRPGAttributeSet* CA = Cast<UCRPGAttributeSet>(
+                CasterASC->GetAttributeSet(UCRPGAttributeSet::StaticClass())))
         {
-            FGameplayEffectContextHandle ContextHandle =
-                ActorInfo->AbilitySystemComponent->MakeEffectContext();
-            ContextHandle.AddSourceObject(this);
-
-            FGameplayEffectSpecHandle SpecHandle =
-                ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-                    IntimidateEffectClass, GetAbilityLevel(), ContextHandle);
-
-            if (SpecHandle.IsValid())
-            {
-                TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-
-                const FString TargetName = TargetCharacter->GetName();
-                UE_LOG(LogTemp, Log,
-                    TEXT("GA_Intimidate: Success! %s is now Stunned — loses next turn."),
-                    *TargetName);
-            }
+            INTModifier = UCRPGCombatLibrary::GetModifier(CA->GetIntelligence());
         }
     }
-    else
+
+    Caster->SetIsAttacking(true);
+
+    // Every living enemy within IntimidateRadius of Nameless rolls to resist.
+    const FVector CasterLoc = Caster->GetActorLocation();
+
+    TArray<AActor*> Everyone;
+    UGameplayStatics::GetAllActorsOfClass(World, ABaseCharacter::StaticClass(), Everyone);
+
+    for (AActor* A : Everyone)
     {
-        // Failure — the target resisted. Mana is still spent.
-        const FString TargetName = TargetCharacter->GetName();
-        UE_LOG(LogTemp, Log,
-            TEXT("GA_Intimidate: Failed. %s resisted the intimidation."),
-            *TargetName);
+        ABaseCharacter* Enemy = Cast<ABaseCharacter>(A);
+        if (!Enemy || Enemy->IsPlayerCharacter() || !Enemy->IsAlive()) continue;
+        if (FVector::Dist(CasterLoc, Enemy->GetActorLocation()) > IntimidateRadius) continue;
+
+        UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent();
+        const UCRPGAttributeSet* EA = EnemyASC ? Cast<UCRPGAttributeSet>(
+            EnemyASC->GetAttributeSet(UCRPGAttributeSet::StaticClass())) : nullptr;
+        if (!EA) continue;
+
+        const int32 WisdomDC = UCRPGCombatLibrary::CalculateDC(
+            UCRPGCombatLibrary::GetModifier(EA->GetWisdom()));
+        const int32 RawRoll = UCRPGCombatLibrary::RollD20();
+        const int32 FinalRoll = RawRoll + INTModifier;
+
+        UE_LOG(LogTemp, Log, TEXT("GA_Intimidate: %s — %d + %d (INT) = %d vs DC %d."),
+            *Enemy->GetName(), RawRoll, INTModifier, FinalRoll, WisdomDC);
+
+        if (FinalRoll >= WisdomDC)
+        {
+            DisplaceEnemy(Enemy, Caster);   // failed the save → flung back
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("GA_Intimidate: %s held its ground."), *Enemy->GetName());
+        }
     }
 
-    // ── Step 4: Delay end so attack animation has time to play ────────────
-    if (UWorld* World = GetWorld())
-    {
-        FTimerHandle TimerHandle;
-        FTimerDelegate Delegate;
-        Delegate.BindLambda([this, Handle, ActorInfo, ActivationInfo, Caster]()
-        {
-            if (Caster) Caster->SetIsAttacking(false);
-            EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        });
-        World->GetTimerManager().SetTimer(TimerHandle, Delegate, 0.8f, false);
-    }
-    else
+    // Delay end so the cast animation has time to play.
+    FTimerHandle TimerHandle;
+    FTimerDelegate Delegate;
+    Delegate.BindLambda([this, Handle, ActorInfo, ActivationInfo, Caster]()
     {
         if (Caster) Caster->SetIsAttacking(false);
         EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+    });
+    World->GetTimerManager().SetTimer(TimerHandle, Delegate, 0.8f, false);
+}
+
+void UGA_Intimidate::DisplaceEnemy(ABaseCharacter* Enemy, AActor* Caster)
+{
+    UWorld* World = Enemy ? Enemy->GetWorld() : nullptr;
+    if (!World || !Caster) return;
+
+    // Straight away from Nameless, flattened to the ground plane.
+    FVector Dir = Enemy->GetActorLocation() - Caster->GetActorLocation();
+    Dir.Z = 0.f;
+    Dir = Dir.GetSafeNormal();
+    if (Dir.IsNearlyZero()) Dir = (-Enemy->GetActorForwardVector()).GetSafeNormal();
+
+    const FVector Start = Enemy->GetActorLocation();
+    const FVector End   = Start + Dir * Enemy->MoveRange;
+
+    // Sweep the enemy's own width along the retreat line. ECC_Pawn is blocked by
+    // walls, shelves, AND other enemy capsules. Ignore Nameless — he never stops
+    // the shove or takes damage from it — and the enemy itself.
+    const float Radius = Enemy->GetCapsuleComponent()->GetScaledCapsuleRadius();
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(Enemy);
+    Params.AddIgnoredActor(Caster);
+
+    FHitResult Hit;
+    const bool bHit = World->SweepSingleByChannel(
+        Hit, Start, End, FQuat::Identity, ECC_Pawn,
+        FCollisionShape::MakeSphere(Radius), Params);
+
+    // Instant for now — the smooth panic-slide + VFX is the later juice pass.
+    const FVector Destination = bHit ? Hit.Location : End;
+    Enemy->SetActorLocation(Destination, false, nullptr, ETeleportType::TeleportPhysics);
+
+    if (bHit)
+    {
+        ApplyImpactDamage(Enemy);                                  // the flung enemy
+        if (ABaseCharacter* Other = Cast<ABaseCharacter>(Hit.GetActor()))
+        {
+            if (!Other->IsPlayerCharacter() && Other->IsAlive())
+                ApplyImpactDamage(Other);                          // mutual, if it hit an enemy
+        }
+        UE_LOG(LogTemp, Log, TEXT("GA_Intimidate: %s slammed into %s."),
+            *Enemy->GetName(), *GetNameSafe(Hit.GetActor()));
     }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("GA_Intimidate: %s flung into open space."), *Enemy->GetName());
+    }
+}
+
+void UGA_Intimidate::ApplyImpactDamage(ABaseCharacter* Victim)
+{
+    UAbilitySystemComponent* ASC = Victim ? Victim->GetAbilitySystemComponent() : nullptr;
+    if (!ASC || !DamageEffect) return;
+
+    FGameplayEffectContextHandle Ctx = ASC->MakeEffectContext();
+    Ctx.AddSourceObject(this);
+    FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(DamageEffect, GetAbilityLevel(), Ctx);
+    if (Spec.IsValid()) ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 }

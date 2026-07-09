@@ -154,6 +154,7 @@ void APlayerCharacter::FireAbility(const FName& TagName)
     FGameplayEventData Payload;
     Payload.Target = CurrentTarget;
 
+    FaceActor(CurrentTarget);  
     FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TagName);
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, Tag, Payload);
 }

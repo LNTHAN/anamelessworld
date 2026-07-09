@@ -61,7 +61,7 @@ private:
     // each arm a specific ability tag.
     void OnAbilityOnePressed();   // Ability.Support.Embolden
     void OnAbilityTwoPressed();   // Ability.Debuff.Intimidate
-    void OnAbilityThreePressed(); // Ability.Debuff.Provoke
+    void OnAbilityThreePressed(); // Ability.Debuff.Confuse
 
     UFUNCTION()
     void OnCombatTurnStarted(ABaseCharacter* ActiveCombatant);

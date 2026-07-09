@@ -124,6 +124,7 @@ void AEnemyCharacter::AttackTarget()
     FGameplayEventData Payload;
     Payload.Target = PendingTarget;
 
+    FaceActor(PendingTarget);          
     SetIsAttacking(true);
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, PendingAttackTag, Payload);
 
@@ -273,6 +274,15 @@ void AEnemyCharacter::EndTurnAfterDelay()
 void AEnemyCharacter::EndTurnNow()
 {
     SetIsAttacking(false);
+
+    // Confusion wears off after the enemy has taken its confused turn (its attack
+    // already fired with Disadvantage before this). No-op if it wasn't confused.
+    if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+    {
+        FGameplayTagContainer ConfusedTag(FGameplayTag::RequestGameplayTag(FName("State.Confused")));
+        ASC->RemoveActiveEffectsWithGrantedTags(ConfusedTag);
+    }
+
     if (TurnManager)
     {
         TurnManager->EndTurn();

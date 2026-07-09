@@ -144,7 +144,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Movement")
     float MoveRange = 500.f;
 
-        // ── Action economy (per-turn stocks) ─────────────────────────────────────
+    // Instantly turn to face a target (horizontal only). Called before an
+    // attack/cast so characters look at who they're acting on.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void FaceActor(const AActor* Target);
+
+    // ── Action economy (per-turn stocks) ─────────────────────────────────────
     // Each turn a combatant gets ONE move and ONE action, spent independently
     // and in any order. Both refill when this combatant's turn begins.
     UPROPERTY(BlueprintReadOnly, Category = "ANW|Turn")

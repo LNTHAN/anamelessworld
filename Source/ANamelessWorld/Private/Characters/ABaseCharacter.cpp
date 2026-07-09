@@ -299,6 +299,17 @@ void ABaseCharacter::SetIsDead(bool bDead)
         if (ValuePtr) *ValuePtr = bDead;
     }
 }
+
+void ABaseCharacter::FaceActor(const AActor* Target)
+{
+    if (!Target) return;
+    FVector Dir = Target->GetActorLocation() - GetActorLocation();
+    Dir.Z = 0.f;
+    if (!Dir.IsNearlyZero())
+    {
+        SetActorRotation(Dir.Rotation());
+    }
+}
 // ════════════════════════════════════════════════════════════════════════════
 // NOTES FOR CHILD CLASSES
 // ════════════════════════════════════════════════════════════════════════════
