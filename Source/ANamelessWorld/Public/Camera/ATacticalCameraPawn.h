@@ -79,6 +79,12 @@ public:
     // FocusZoom. Called by the controller whenever a combatant's turn starts.
     void FocusOn(const FVector& WorldLocation);
 
+    // Kicks off a short camera shake. Called from Blueprints (the rigged shelf's
+    // OnDetonated) for impact. Rotates our own camera component directly — the
+    // PlayerCameraManager shake system doesn't apply to this decoupled rig.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Camera")
+    void TriggerShake();
+
 private:
     // --- Input handlers -----------------------------------------------------
     void PanForward(float Value); // W/S — into/out of the screen
@@ -104,6 +110,17 @@ private:
 
     // Helper: move the pivot along the ground, relative to current camera yaw.
     void PanAlong(const FVector& WorldDir, float Value);
+
+    UPROPERTY(EditAnywhere, Category = "ANW|Camera")
+    float ShakeDuration = 0.35f;
+
+    UPROPERTY(EditAnywhere, Category = "ANW|Camera")
+    float ShakeAmplitude = 3.0f;    // peak wobble in degrees
+
+    UPROPERTY(EditAnywhere, Category = "ANW|Camera")
+    float ShakeFrequency = 30.0f;
+
+    float ShakeTimeRemaining = 0.0f;
 
 public:
     virtual void Tick(float DeltaSeconds) override;

@@ -134,4 +134,30 @@ void ATacticalCameraPawn::Tick(float DeltaSeconds)
             bIsFocusing = false;
         }
     }
+
+    // Camera shake — a short decaying wobble on the camera's own rotation. Done
+    // here rather than via PlayerCameraManager shakes, which don't affect this rig.
+    if (ShakeTimeRemaining > 0.f)
+    {
+        ShakeTimeRemaining = FMath::Max(0.f, ShakeTimeRemaining - DeltaSeconds);
+        const float Decay   = ShakeTimeRemaining / ShakeDuration;   // 1 → 0
+        const float Elapsed = ShakeDuration - ShakeTimeRemaining;
+        const float Osc     = FMath::Sin(Elapsed * ShakeFrequency);
+        const float Amp     = ShakeAmplitude * Decay;
+
+        Camera->SetRelativeRotation(FRotator(
+            Osc * Amp,          // pitch
+            Osc * Amp * 0.6f,   // yaw
+            Osc * Amp * 1.5f)); // roll — reads most on a top-down view
+
+        if (ShakeTimeRemaining <= 0.f)
+        {
+            Camera->SetRelativeRotation(FRotator::ZeroRotator); // settle back level
+        }
+    }
+}
+
+void ATacticalCameraPawn::TriggerShake()
+{
+    ShakeTimeRemaining = ShakeDuration;   // Tick does the rest
 }

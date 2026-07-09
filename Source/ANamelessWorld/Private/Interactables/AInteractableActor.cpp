@@ -7,21 +7,25 @@
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "AIController.h"
+#include "Engine/StaticMesh.h"
 
 AInteractableActor::AInteractableActor()
 {
-    // No per-frame work — the trap reacts to overlap events, never Tick.
-    PrimaryActorTick.bCanEverTick = false;
+    // A hinge at the base. We rotate THIS to topple, so the shelf swings around
+    // its bottom edge instead of spinning about its own center.
+    Pivot = CreateDefaultSubobject<USceneComponent>(TEXT("Pivot"));
+    SetRootComponent(Pivot);
 
-    // The mesh is the root: everything (and the AoE sphere) hangs off the body.
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-    SetRootComponent(Mesh);
+    Mesh->SetupAttachment(Pivot);
 
     // The AoE + trip-wire. Query-only (no physics push), and set to OVERLAP the
     // Pawn channel so characters walking in fire begin-overlap events. Radius is
     // finalised in BeginPlay from TriggerRadius.
     TriggerSphere = CreateDefaultSubobject<USphereComponent>(TEXT("TriggerSphere"));
-    TriggerSphere->SetupAttachment(Mesh);
+    TriggerSphere->SetupAttachment(Pivot);
+
     TriggerSphere->SetUsingAbsoluteScale(true); // ignore mesh scale, keep the AoE radius constant
     TriggerSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     TriggerSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -56,6 +60,20 @@ void AInteractableActor::BeginPlay()
         this, &AInteractableActor::OnSphereBeginOverlap);
 }
 
+void AInteractableActor::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    // Lift the mesh so its base sits on the Pivot. Done here (not BeginPlay) so it
+    // shows in the EDITOR too — placement becomes WYSIWYG.
+    if (Mesh && Mesh->GetStaticMesh())
+    {
+        const float HalfHeight =
+            Mesh->GetStaticMesh()->GetBounds().BoxExtent.Z * Mesh->GetComponentScale().Z;
+        Mesh->SetRelativeLocation(FVector(0.f, 0.f, HalfHeight));
+    }
+}
+
 void AInteractableActor::Arm()
 {
     if (bTriggered || bArmed) return;
@@ -84,9 +102,9 @@ void AInteractableActor::CheckProximity()
     {
         ABaseCharacter* Char = Cast<ABaseCharacter>(A);
         if (Char && !Char->IsPlayerCharacter() && Char->IsAlive()
-            && GetDistanceToBody(Char->GetActorLocation()) <= TriggerRadius)
+            && IsInBlastZone(Char->GetActorLocation()))
         {
-            Detonate();
+            BeginDetonation(Char); 
             return;
         }
     }
@@ -109,6 +127,30 @@ void AInteractableActor::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedCom
     Detonate();
 }
 
+FVector AInteractableActor::GetBlastHalfExtents() const
+{
+    // Shelf's own half-size (accounting for its scale).
+    FVector Half = (Mesh && Mesh->GetStaticMesh())
+        ? Mesh->GetStaticMesh()->GetBounds().BoxExtent * Mesh->GetComponentScale()
+        : FVector(50.f, 50.f, 100.f);
+
+    // Expand the SHORTER horizontal axis (the front/back topple direction).
+    if (Half.X <= Half.Y) Half.X += ToppleReach;
+    else                  Half.Y += ToppleReach;
+
+    Half.Z = 100.f;   // a fixed vertical band; height doesn't matter here
+    return Half;
+}
+
+bool AInteractableActor::IsInBlastZone(const FVector& WorldLoc) const
+{
+    const FVector Rel  = WorldLoc - GetActorLocation();
+    const FVector Half = GetBlastHalfExtents();
+    const float AlongX = FMath::Abs(FVector::DotProduct(Rel, GetActorForwardVector()));
+    const float AlongY = FMath::Abs(FVector::DotProduct(Rel, GetActorRightVector()));
+    return AlongX <= Half.X && AlongY <= Half.Y;
+}
+
 void AInteractableActor::Detonate()
 {
     if (bTriggered) return;                // one-shot guard
@@ -128,7 +170,7 @@ void AInteractableActor::Detonate()
     {
         ABaseCharacter* Victim = Cast<ABaseCharacter>(A);
         if (!Victim || !Victim->IsAlive()) continue;
-        if (GetDistanceToBody(Victim->GetActorLocation()) > TriggerRadius) continue;
+        if (!IsInBlastZone(Victim->GetActorLocation())) continue;
 
         UAbilitySystemComponent* VictimASC = Victim->GetAbilitySystemComponent();
         if (!VictimASC || !DamageEffect) continue;
@@ -148,4 +190,31 @@ void AInteractableActor::Detonate()
                 *GetName(), *Victim->GetName());
         }
     }
+
+    // Presentation hook — the Blueprint plays the shake / VFX / sound / topple.
+    OnDetonated();
+}
+
+void AInteractableActor::BeginDetonation(ABaseCharacter* Trigger)
+{
+    if (bTriggered) return;
+
+    // Stop re-checking / being armed so nothing re-trips during the sequence.
+    bArmed = false;
+    GetWorldTimerManager().ClearTimer(ProximityTimerHandle);
+
+    // Freeze the enemy that tripped it — it stops IN the blast rather than the
+    // shelf detonating mid-stride. This is your "enemy stops in range" beat.
+    if (Trigger)
+    {
+        if (AAIController* AI = Cast<AAIController>(Trigger->GetController()))
+        {
+            AI->StopMovement();
+        }
+    }
+
+    // Telegraph now (Blueprint plays the "!!"/scared cue); crush after the beat.
+    OnTelegraph();
+    GetWorldTimerManager().SetTimer(DetonationTimerHandle, this,
+        &AInteractableActor::Detonate, DetonationDelay, false);
 }

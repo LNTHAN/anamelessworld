@@ -246,6 +246,36 @@ the same `GetAllActorsOfClass` + `GetDistanceToBody <= TriggerRadius` sweep as t
 reliable. Verified: arm empty, enemy paths in, `crushed` on entry. (Sphere + `OnSphereBeginOverlap`
 now dormant — can be deleted later.)
 
+## Juice pass — rigged shelf detonation — DONE
+First "make it feel like a game" pass, all on the rigged bookshelf. Pattern: **C++ decides WHEN,
+Blueprint decides how it LOOKS**, via `BlueprintImplementableEvent`s the C++ fires.
+- **Detonation sequence** (was instant): `CheckProximity` → `BeginDetonation(Trigger)` freezes the
+  enemy (`AIController::StopMovement`), fires `OnTelegraph()` (BP "!!" beat), waits `DetonationDelay`
+  (0.8s), then `Detonate()` (damage + `OnDetonated()`). So: enemy stops → telegraph → crush + shake.
+- **Camera shake:** the PlayerCameraManager shake system does NOT work on the decoupled tactical rig.
+  Solution = shake our own camera in C++: `ATacticalCameraPawn::TriggerShake()` sets `ShakeTimeRemaining`;
+  Tick applies a decaying sine wobble to the Camera component's relative rotation. BP calls it via
+  Get Controlled Pawn → Cast → TriggerShake, off the topple Timeline's **Finished** pin (shake on landing).
+- **Topple animation:** BP Timeline (0.4s, Alpha 0→1) → `Set Relative Rotation` (Lerp 0→Roll 90).
+  Needs a **base hinge**: added a `Pivot` SceneComponent as root, Mesh child lifted by half-height in
+  `OnConstruction` (WYSIWYG — editor shows real position) so it rotates around its bottom edge, not center.
+  Mesh Mobility must be **Movable**. Shelf actor origin is now the BASE — place with base on floor.
+- **Directional blast:** replaced the circular AoE with a shelf-aligned rectangle — `IsInBlastZone`
+  (dot products vs forward/right) + `GetBlastHalfExtents` (auto-sized from mesh bounds, thin axis
+  expanded by `ToppleReach`). Hits front/back only, not sideways. Debug `DrawDebugBox` used to tune, removed.
+- **VFX assets:** `CS_Detonation` (LegacyCameraShake) in Content/Effects; `OnTelegraph` is a Print String
+  placeholder for now.
+- **Lessons:** new `UFUNCTION`/BP events need a FULL editor restart to appear; a shape component inherits
+  its parent's non-uniform scale (use `SetUsingAbsoluteScale`); `SetRelativeRotation` needs Movable
+  mobility; center vs base pivot is the whole game for a topple; use `OnConstruction` (not BeginPlay)
+  for editor-visible transforms.
+
+## Juice — deferred polish (save for later)
+- **Toppled shelf should linger then fade/despawn**, not vanish — user-requested next tweak.
+- Real **"!!" telegraph VFX** (particle/widget) to replace the Print String; **dust/debris burst** on crush.
+- **Fall toward the triggering enemy** (compute `ToppleSign` in `BeginDetonation`, multiply the topple angle).
+- Swap greybox cube for a real **bookshelf model** (topple animation + pivot already carry over).
+
 ## Next Task
 **Block H, part 2** — Intimidate → displacement + AoE fear (now testable against
 real terrain; retreat collides with walls/shelves/enemies per DESIGN_RATIONALE §6), then the
@@ -305,3 +335,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 29 | **Block I pt2** — Interact framework: `AInteractableActor` two-stage proximity trap (Arm→enemy-enter Spring→AoE crush hits everyone incl. Nameless), distance-to-body detection, `TryInteract` on player, Interact reuses modal `ArmedAbilityTag` via `Action.Interact` sentinel (key 4 + WBP button), `BP_RiggedBookshelf` in TestLevel. Fixed stale-armed-tag-between-turns bug; overlap-events + distance-to-body fixes for the crush. Turn-start intermission (enemies wait for camera before acting). | ✓ |
 | 30 | **Enemy movement** — AttackRange gate + capped pathing + arrival callback: `PerformAITurn`→`EngageTarget` (in range → strike, else `MoveTowardTarget`), AIController `MoveToLocation` to a `PointAlongPath` point clamped to `MoveRange`, `OnMoveCompleted` re-checks range → strike/end. Fixes: stop inside AttackRange (acceptance-radius undershoot), bind-once+unbind (double-attack guard), MoveTo return-value handling. Enemy BPs set AutoPossessAI. Unblocks the shelf enemy-enter spring. | ✓ |
 | 31 | **Character avoidance + trap trigger** — per-turn nav obstacles (every character carves the navmesh except the active mover, via `SetNavObstacleEnabled` in `BeginTurn`; Runtime Generation=Dynamic; dest projected to navmesh) so movers path around each other crisply; abandoned RVO/Crowd. Rigged-shelf walk-in trigger switched from unreliable physics overlap to a 0.15s `CheckProximity` poll. Long session — the nav-obstacle "needs a full restart to apply" gotcha cost hours. | ✓ |
+| 32 | **Juice pass — rigged shelf detonation**: telegraph sequence (freeze enemy → "!!" beat → crush), C++ camera shake on the tactical rig (`TriggerShake`, PlayerCameraManager shakes don't work on it), topple Timeline with a base-hinge `Pivot` component + `OnConstruction` WYSIWYG lift, directional (front/back) blast rectangle. `BlueprintImplementableEvent` `OnDetonated`/`OnTelegraph` = C++-decides-when, BP-decides-look. | ✓ |
