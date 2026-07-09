@@ -302,9 +302,26 @@ Confuse is hardcoded to 1 turn. Making statuses last **N turns** (Confuse 2, Stu
 turn-counting SYSTEM (not just data) — e.g. TurnManager ticks active turn-statuses down each round, removes at 0.
 The per-status **number** is data → build this WITH **I2** so durations are data-driven from the start.
 
-## Next Task
-**I2 — data architecture** (DataTables/CSV for ability + character stats), then **H2** (progression —
-XP/leveling/Mana), then **J** (AI/boss/balance). Build the turn-based status-duration system alongside I2.
+## Next Task — Tactical UX loop
+**Battle flow end-to-end:** click ability → target-select mode (skip for no-target AoE like Intimidate) →
+**confirm/cancel step** (Space/button to confirm, Back button + Esc/RMB to abort) → a **forecast panel**
+(both portraits — caster + target — with hit-%/damage-range + effect preview; abilities use dice so it's a
+Fire-Emblem-style *chance* preview, not exact). This is the reusable **"AoE/ability targeting mode"** layered
+onto the modal-input controller (`ArmedAbilityTag`). Build in 2 stages: (1) target-select + confirm/abort
+input backbone, then (2) the forecast UI.
+
+## SCOPE LOCKED — deadline-driven (see memory [[deadline-coding-final]])
+Build doubles as a **coding-school final, needs a passable demonstrable build by end of Aug 2026** (~50 daily
+sessions from 2026-07-09). **The current state is already roughly passable** — so remaining work is
+high-value polish + a satisfying climax, NOT obligation. Priority order:
+1. **Tactical UX loop** (above) — makes the battle flow feel right.
+2. **Boss encounter + balance** (J) — the climax that proves the manipulation combat; single highest-value deliverable.
+3. **Full loop wiring** — intro → battle → **win AND lose** screens → outro (a complete experience).
+4. **Flair the user wants** (the fun part): retreat + collision animation (Intimidate's smooth panic-slide + fall-over,
+   replacing the teleport), **floating combat text / ability damage numbers**, ability VFX, more screenshake, UI skin/juice.
+5. **I2 data architecture** (portfolio value — shows clean architecture to a grader) + turn-based status-duration system; **H2** progression as time allows.
+- **Guard the critical path from rabbit holes** — time-box exploration, ship "good enough." A complete rough slice beats a gorgeous half-finished one for a grade.
+- Leave the last ~1–1.5 weeks as a **playtest/balance/bug-fix buffer**.
 
 **Still pending from Block G** (later polish): drive decal size from MoveRange + show only on
 player's turn; optional cleanup of dead
