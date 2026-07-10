@@ -93,6 +93,11 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ANW|Components")
     UDialogueComponent* DialogueComp;
 
+    // True while a dialogue line is on screen — lets the controller consume an
+    // LMB as "advance the line" so the game plays mouse-only.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Dialogue")
+    bool IsDialogueActive() const;
+
     UFUNCTION(BlueprintCallable, Category = "ANW|Dialogue")
     void AdvanceDialogue();
 

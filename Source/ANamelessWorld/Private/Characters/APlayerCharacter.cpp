@@ -180,6 +180,11 @@ void APlayerCharacter::OnAttackPressed()
     // GA_BasicAttack itself stays: enemies still use it to attack Nameless.
 }
 
+bool APlayerCharacter::IsDialogueActive() const
+{
+    return DialogueComp && DialogueComp->IsDialogueActive();
+}
+
 void APlayerCharacter::AdvanceDialogue()
 {
     if (!DialogueComp || !DialogueComp->IsDialogueActive()) return;

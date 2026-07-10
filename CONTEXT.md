@@ -302,13 +302,45 @@ Confuse is hardcoded to 1 turn. Making statuses last **N turns** (Confuse 2, Stu
 turn-counting SYSTEM (not just data) — e.g. TurnManager ticks active turn-statuses down each round, removes at 0.
 The per-status **number** is data → build this WITH **I2** so durations are data-driven from the start.
 
-## Next Task — Tactical UX loop
-**Battle flow end-to-end:** click ability → target-select mode (skip for no-target AoE like Intimidate) →
-**confirm/cancel step** (Space/button to confirm, Back button + Esc/RMB to abort) → a **forecast panel**
-(both portraits — caster + target — with hit-%/damage-range + effect preview; abilities use dice so it's a
-Fire-Emblem-style *chance* preview, not exact). This is the reusable **"AoE/ability targeting mode"** layered
-onto the modal-input controller (`ArmedAbilityTag`). Build in 2 stages: (1) target-select + confirm/abort
-input backbone, then (2) the forecast UI.
+## Tactical UX loop — Stage 1 (confirm/abort backbone) — DONE
+Split the one-beat ability flow (arm → click = fire) into the two-beat Fire-Emblem loop:
+**arm → stage a target → confirm**, all on `ATacticalPlayerController`. The state machine grew
+from the single `ArmedAbilityTag` FName to a 3-value **`ETargetingPhase`** (Idle/Targeting/
+Confirming) + a **`PendingTarget`** pointer (the staged-but-not-yet-fired target; null for self-cast).
+- **`AbilityRequiresTarget(FName)`** branches on arm: targeted skills (Confuse, Interact) → Targeting;
+  self-cast AoE (Intimidate) → straight to Confirming (nothing to click). Currently just
+  `tag != Ability.Debuff.Intimidate` — move to data (I2) once more self-casts exist.
+- **`ConfirmPendingAction()`** is the ONLY place an ability fires — the click no longer fires. Self-cast
+  passes Nameless himself as the (ignored) target arg; `ResetTargeting()` returns to Idle after.
+- **Mouse-only, two buttons, one rule:** in Confirming, **any LMB commits**; **RMB steps back**
+  (Confirming→Targeting on a targeted skill so you re-pick immediately; else →Idle). Re-target = RMB
+  then click. Space (Confirm key) also commits. **NO on-screen confirm/cancel buttons** — decided
+  against them; RMB/LMB is enough.
+- **LMB advances dialogue** (`APlayerCharacter::IsDialogueActive()` gate, checked FIRST in
+  `OnMoveClicked`) so the game is fully mouse-playable. OnMoveClicked order: dialogue → interact →
+  confirming → targeting → idle-move (dialogue must be first or the click is eaten by move and the
+  line never advances).
+- **Confirm key = SpaceBar, ADDED alongside** the existing `Attack`=SpaceBar (not repointed). One press
+  fires both handlers safely: `OnAttackPressed` no-ops unless dialogue is active, `ConfirmPendingAction`
+  no-ops unless Confirming — mutually exclusive contexts, never collide.
+
+## Tactical UX loop — Stage 2 (forecast panel) — NEXT
+Display-only forecast UI shown during Confirming: caster + target portraits, hit-%/damage-range, effect
+preview (dice → an FE-style *chance* preview, not exact). **Make the panel `SelfHitTestInvisible`** so
+LMB/RMB pass through to the controller everywhere — the panel has no buttons (RMB/LMB drive everything).
+Field clicks route to `ConfirmPendingAction` as normal.
+
+## Movement — stays committed; preview deferred to Block K
+Reaffirmed the locked "no movement undo" decision (BG3/Larian: movement is a committed event). BG3's real
+QoL is a **movement preview** (pathing line + move-cost + hazard/AoO warnings) + mid-stride cancel, NOT
+rewind — build that in Block K once hazards/AoO exist to warn about.
+
+## Deferred cleanup (grep-verified C++-dead, pending Blueprint Find-References check)
+Post-Stage-1 tidy pass, do AFTER confirming each is Blueprint-unreferenced: `AEnemyAIController` (whole
+class, both files — verify no enemy BP's AIControllerClass points at it); `UseEmbolden`/`UseIntimidate`/
+`UseProvoke` on APlayerCharacter (buttons rewired to ArmAbility); the `CycleTarget`+`AddTarget`+`AllTargets`
+cluster (verify the Level BP no longer writes `AllTargets` first). Also the player's dead input/cursor block
+and the shelf's dormant `TriggerSphere`/`OnSphereBeginOverlap`. Do it as its own commit, separate from features.
 
 ## SCOPE LOCKED — deadline-driven (see memory [[deadline-coding-final]])
 Build doubles as a **coding-school final, needs a passable demonstrable build by end of Aug 2026** (~50 daily
@@ -376,3 +408,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 31 | **Character avoidance + trap trigger** — per-turn nav obstacles (every character carves the navmesh except the active mover, via `SetNavObstacleEnabled` in `BeginTurn`; Runtime Generation=Dynamic; dest projected to navmesh) so movers path around each other crisply; abandoned RVO/Crowd. Rigged-shelf walk-in trigger switched from unreliable physics overlap to a 0.15s `CheckProximity` poll. Long session — the nav-obstacle "needs a full restart to apply" gotcha cost hours. | ✓ |
 | 32 | **Juice pass — rigged shelf detonation**: telegraph sequence (freeze enemy → "!!" beat → crush), C++ camera shake on the tactical rig (`TriggerShake`, PlayerCameraManager shakes don't work on it), topple Timeline with a base-hinge `Pivot` component + `OnConstruction` WYSIWYG lift, directional (front/back) blast rectangle. `BlueprintImplementableEvent` `OnDetonated`/`OnTelegraph` = C++-decides-when, BP-decides-look. | ✓ |
 | 33 | **Block H pt2** — Intimidate reworked to AoE fear/displacement (roll → fling away from Nameless via ECC_Pawn capsule sweep → impact + mutual damage → herd into rigged shelves); Provoke→Confuse rename (tag + redirect + button + Embolden hidden); Confuse now 1 turn (Infinite GE stripped in EndTurnNow); characters `FaceActor` their target before attacking. | ✓ |
+| 34 | **Tactical UX loop — Stage 1** (confirm/abort backbone): `ETargetingPhase` (Idle/Targeting/Confirming) + `PendingTarget` on the controller; click stages, `ConfirmPendingAction` fires; any-LMB-commits / RMB-steps-back; `AbilityRequiresTarget` skips Targeting for self-cast Intimidate; LMB advances dialogue (`IsDialogueActive`); Confirm=SpaceBar added. No on-screen confirm/cancel buttons (RMB/LMB only). | ✓ |

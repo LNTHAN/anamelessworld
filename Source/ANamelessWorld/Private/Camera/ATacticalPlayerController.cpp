@@ -43,6 +43,8 @@ void ATacticalPlayerController::SetupInputComponent()
         &ATacticalPlayerController::OnAbilityThreePressed);
     InputComponent->BindAction("Interact", IE_Pressed, this,
         &ATacticalPlayerController::OnInteractPressed);    
+    InputComponent->BindAction("Confirm", IE_Pressed, this,
+        &ATacticalPlayerController::OnConfirmPressed);
 }
 
 void ATacticalPlayerController::ArmAbility(FName TagName)
@@ -55,56 +57,65 @@ void ATacticalPlayerController::ArmAbility(FName TagName)
     if (!ControlledCharacter->bActionAvailable) return;
 
     ArmedAbilityTag = TagName;
+    PendingTarget = nullptr;
+
+    // Targeted abilities (and Interact) wait for a click; a self-cast AoE
+    // like Intimidate has nothing to click, so it arms straight to Confirming.
+    TargetingPhase = AbilityRequiresTarget(TagName)
+        ? ETargetingPhase::Targeting
+        : ETargetingPhase::Confirming;
 }
 
 void ATacticalPlayerController::OnMoveClicked()
 {
     if (!ControlledCharacter) return;
 
-        // Armed: this click picks a TARGET, not a destination.
-    if (ArmedAbilityTag != NAME_None)
+    // Dialogue up: LMB advances the line (mouse-only play).
+    if (ControlledCharacter->IsDialogueActive())
     {
-        // Interact mode: trace for a rigged OBJECT, not a character. We trace on
-        // ECC_Visibility (the shelf mesh blocks it) so the ray passes through any
-        // character standing in front — character capsules don't block Visibility.
-        if (ArmedAbilityTag == FName("Action.Interact"))
-        {
-            FHitResult Hit;
-            if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
-            {
-                if (AInteractableActor* Object = Cast<AInteractableActor>(Hit.GetActor()))
-                {
-                    // Only un-arm if it actually rigged — too-far returns false,
-                    // so the player can walk closer and click the shelf again.
-                    if (ControlledCharacter->TryInteract(Object))
-                    {
-                        ArmedAbilityTag = NAME_None;
-                    }
-                }
-            }
-            return; // clicked empty space / not a shelf: stay armed, try again
-        }
+        ControlledCharacter->AdvanceDialogue();
+        return;
+    }
 
-        // Ability mode: trace for a character target on ECC_Pawn.
+    // Interact: one-click arm. Trace ECC_Visibility (shelf blocks it, capsules don't).
+    if (ArmedAbilityTag == FName("Action.Interact"))
+    {
+        FHitResult Hit;
+        if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+        {
+            if (AInteractableActor* Object = Cast<AInteractableActor>(Hit.GetActor()))
+            {
+                if (ControlledCharacter->TryInteract(Object)) ResetTargeting();
+            }
+        }
+        return;
+    }
+
+    // Confirming: any LMB commits. To re-pick, RMB back then click a new target.
+    if (TargetingPhase == ETargetingPhase::Confirming)
+    {
+        ConfirmPendingAction();
+        return;
+    }
+
+    // Targeting: the click must land on a character to stage it.
+    if (TargetingPhase == ETargetingPhase::Targeting)
+    {
         FHitResult Hit;
         if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
         {
             if (ABaseCharacter* Target = Cast<ABaseCharacter>(Hit.GetActor()))
             {
-                ControlledCharacter->FireAbilityAtTarget(ArmedAbilityTag, Target);
-                ArmedAbilityTag = NAME_None; // consumed — back to Idle
+                PendingTarget = Target;
+                TargetingPhase = ETargetingPhase::Confirming;
             }
         }
-        // Missed (empty space or a non-target actor): stay armed, try again.
         return;
     }
 
     // Idle: this click is a move destination.
     FHitResult Hit;
-    if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
-    {
-        return; // Clicked empty space — do nothing.
-    }
+    if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit)) return;
     ControlledCharacter->TryMoveTo(Hit.Location);
 }
 
@@ -120,7 +131,61 @@ void ATacticalPlayerController::OnAdvanceDialogue()
 
 void ATacticalPlayerController::OnCancelPressed()
 {
+    // Back one beat: while confirming a targeted ability, drop the staged
+    // target but stay armed so the player can re-pick. Any other state
+    // (Targeting, or confirming a self-cast AoE) cancels fully to Idle.
+    if (TargetingPhase == ETargetingPhase::Confirming &&
+        AbilityRequiresTarget(ArmedAbilityTag))
+    {
+        PendingTarget = nullptr;
+        TargetingPhase = ETargetingPhase::Targeting;
+        return;
+    }
+
+    ResetTargeting();
+}
+
+void ATacticalPlayerController::ConfirmPendingAction()
+{
+    if (TargetingPhase != ETargetingPhase::Confirming) return;
+    if (!ControlledCharacter) return;
+
+    const FName TagToFire = ArmedAbilityTag;
+
+    if (AbilityRequiresTarget(TagToFire))
+    {
+        // Targeted ability: we must have a staged target to fire at.
+        if (!PendingTarget) return;
+        ControlledCharacter->FireAbilityAtTarget(TagToFire, PendingTarget);
+    }
+    else
+    {
+        // Self-cast AoE (Intimidate): no target needed. FireAbilityAtTarget
+        // still takes a target arg, so pass Nameless himself — GA_Intimidate
+        // ignores it and sweeps everyone in its radius.
+        ControlledCharacter->FireAbilityAtTarget(TagToFire, ControlledCharacter);
+    }
+
+    ResetTargeting(); // consumed — back to Idle
+}
+
+void ATacticalPlayerController::OnConfirmPressed()
+{
+    ConfirmPendingAction();
+}
+
+bool ATacticalPlayerController::AbilityRequiresTarget(FName TagName) const
+{
+    // Intimidate is a self-centered AoE — no character to click.
+    // Everything else (Confuse, Interact) needs a click-target first.
+    return TagName != FName("Ability.Debuff.Intimidate");
+}
+
+void ATacticalPlayerController::ResetTargeting()
+{
     ArmedAbilityTag = NAME_None;
+    TargetingPhase = ETargetingPhase::Idle;
+    PendingTarget = nullptr;
 }
 
 void ATacticalPlayerController::OnAbilityOnePressed()
@@ -163,8 +228,8 @@ void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombat
     // A fresh turn always starts Idle — drop any ability/interact left armed from
     // a previous turn, or it hijacks every click (traces for a target that a plain
     // move-click will never satisfy) and the player can't move.
-    ArmedAbilityTag = NAME_None;
-        
+    ResetTargeting();
+
     if (!ActiveCombatant) return;
 
     if (ATacticalCameraPawn* CameraPawn = Cast<ATacticalCameraPawn>(GetPawn()))
