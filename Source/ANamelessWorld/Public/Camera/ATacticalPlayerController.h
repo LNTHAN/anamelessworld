@@ -22,6 +22,32 @@ enum class ETargetingPhase : uint8
     Confirming
 };
 
+// The middle-arrow contents for the staged action. Card fields (portrait, name,
+// HP, MP, Lv, EXP) bind off ControlledCharacter / PendingTarget in UMG — this
+// struct is ONLY the two %s, the damage, and the status name.
+USTRUCT(BlueprintType)
+struct FAbilityForecast
+{
+    GENERATED_BODY()
+
+    // False when nothing is staged — UMG uses this to hide the panel.
+    UPROPERTY(BlueprintReadOnly) bool bValid = false;
+
+    // Row 1: chance it connects, and chance it inflicts its status (0–100).
+    UPROPERTY(BlueprintReadOnly) int32 HitChance = 100;
+    UPROPERTY(BlueprintReadOnly) int32 InflictChance = 0;
+
+    // Row 2: direct damage. bDealsDamage = false → UMG shows "--" (Nameless).
+    UPROPERTY(BlueprintReadOnly) int32 Damage = 0;
+    UPROPERTY(BlueprintReadOnly) bool bDealsDamage = false;
+
+    // Row 3: the status inflicted, e.g. "Confused". Empty = none.
+    UPROPERTY(BlueprintReadOnly) FText StatusName;
+
+    // The ability's display name for the arrow header, e.g. "Confuse".
+    UPROPERTY(BlueprintReadOnly) FText AbilityName;
+};
+
 UCLASS()
 class ANAMELESSWORLD_API ATacticalPlayerController : public APlayerController
 {
@@ -60,6 +86,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
 
     void ArmAbility(FName TagName);
+
+    // Builds the forecast for whatever's staged. Invalid (bValid=false) unless
+    // we're Confirming. UMG calls this to fill the arrow.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    FAbilityForecast GetPendingForecast() const;
 
     // Commits the staged action: fires ArmedAbilityTag at PendingTarget, then
     // returns to Idle. No-op unless we're in the Confirming phase. Bound to the

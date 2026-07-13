@@ -324,11 +324,36 @@ Confirming) + a **`PendingTarget`** pointer (the staged-but-not-yet-fired target
   fires both handlers safely: `OnAttackPressed` no-ops unless dialogue is active, `ConfirmPendingAction`
   no-ops unless Confirming — mutually exclusive contexts, never collide.
 
-## Tactical UX loop — Stage 2 (forecast panel) — NEXT
-Display-only forecast UI shown during Confirming: caster + target portraits, hit-%/damage-range, effect
-preview (dice → an FE-style *chance* preview, not exact). **Make the panel `SelfHitTestInvisible`** so
-LMB/RMB pass through to the controller everywhere — the panel has no buttons (RMB/LMB drive everything).
-Field clicks route to `ConfirmPendingAction` as normal.
+## Tactical UX loop — Stage 2 (forecast panel) — DONE
+FFT-style forecast shown during Confirming: two mirrored unit cards + a middle "arrow" (skill name, hit%,
+inflict%, damage, status pill). All Blueprint UI reading C++ state off the controller.
+- **C++ data layer** (`ATacticalPlayerController`): `USTRUCT FAbilityForecast` (bValid, HitChance,
+  InflictChance, Damage, bDealsDamage, StatusName, AbilityName) + `GetPendingForecast()` (const → pure BP
+  node) — per-tag switch (Confuse for now; `// TODO(I2)` to move to a DataTable). Intimidate/self-cast has
+  no single target so the right card collapses.
+- **Card getters on `ABaseCharacter`**: added `GetMana/GetMaxMana/GetCharacterLevel/GetXP/GetUnitName`
+  (mirror `GetHealth`). NB **not** `GetLevel` — collides with `AActor::GetLevel()`; used `GetCharacterLevel`.
+- **`WBP_UnitCard`** (reusable, Content/UI): `Unit` (ABaseCharacter, Instance-Editable + Expose-on-Spawn)
+  variable; portrait slot + name + Lv + EXP + HP/MP bars + job (blank) + status-icon slots. One `RefreshCard`
+  function (guarded `IsValid(Unit)`) sets everything; called on Construct AND re-called by the panel when the
+  Unit changes. Allegiance colour binds off `IsPlayerCharacter()` (blue player / red enemy). Sized ~320×96,
+  80×80 square portrait. **Right card mirrored via Flow Direction Preference = Right to Left** (no duplicate asset).
+- **`WBP_AbilityForecast`** (Content/UI): Canvas root (always `Not Hit-Testable Self & All Children` so LMB/RMB
+  pass through AND it keeps ticking) → a `ForecastRow` (toggled Visible/Collapsed) inside a **Scale Box (User
+  Specified 1.6)** for crisp scaling. Construct caches the controller (`Cast to TacticalPlayerController`); Tick
+  shows/populates when `TargetingPhase == Confirming` (feeds both cards + `RefreshCard`, fills the arrow from
+  `GetPendingForecast`). Spawned once via Level BP `Create Widget → Add to Viewport`.
+
+## HUD follow-ups surfaced during Stage 2 (each its own focused task)
+1. **Command menu turn-gating (#4, do first):** `WBP_CommandMenu` is always visible + fixed → should show only
+   on the player's turn and bind to the active unit (else it overlaps with multiple units). Tie to TurnManager.
+2. **Floating HP bars (#3):** the fixed Player/Enemy/Boss HP bars → per-character world-space bars
+   (`WidgetComponent` above each model).
+3. **Enemy-turn forecast (#2, needs a design call first):** the forecast only fires on the player's Confirming
+   phase; showing an FE-style preview before enemy attacks is a new hook in the enemy AI (do we want it?).
+4. **Forecast native sizing / skin:** currently a Scale Box 1.6 (crisp). Real resize (fonts/dims) + the chevron
+   arrow *shape* (needs a PNG brush — UMG has no polygon primitive) belong in the UI skin pass (Block K).
+   Also: forecast row overlaps the End Turn / turn strip — formalise HUD element zones in that pass.
 
 ## Movement — stays committed; preview deferred to Block K
 Reaffirmed the locked "no movement undo" decision (BG3/Larian: movement is a committed event). BG3's real
@@ -367,6 +392,23 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 
 ## Key Notes
 - **No Claude/AI anywhere in the repo** (files, commit messages, no co-author trailer).
+- **A `Collapsed` UMG widget does NOT tick** — so a panel can't start Collapsed and rely on its own Tick to
+  un-collapse itself (catch-22). Keep the root always painted+click-through (`Not Hit-Testable Self & All
+  Children` ticks) and toggle an inner container's Visible/Collapsed instead. (`Hidden` still reserves layout.)
+- **Scale a widget with a Scale Box (`Stretch=User Specified`), NOT Render Transform Scale** — Render Transform
+  rasterizes at 1.0 then stretches the pixels (blurry text); Scale Box applies a layout scale so fonts re-render
+  crisp.
+- **A `const` BlueprintCallable C++ function becomes a PURE node** (no exec pin) in Blueprint — wire it as data,
+  not in the exec chain.
+- **Mirror a whole widget with `Flow Direction Preference = Right to Left`** (reverses child order + text) — used
+  for the forecast's right unit card, so one `WBP_UnitCard` asset serves both sides. Set an inner child back to
+  Left-to-Right to exempt it (e.g. progress-bar fill).
+- **`GetLevel` is taken** — `AActor::GetLevel()` returns a `ULevel*`; name character-level getters
+  `GetCharacterLevel`. Same care for other engine-name collisions.
+- **A C++ `USTRUCT` has no BP variable panel entry** — see its fields via a `Break <Struct>` node or a function's
+  return pin; struct-layout changes need a FULL editor restart (recompile alone won't refresh it).
+- **Expose-on-Spawn vars only get set via `Create Widget`** (that pin appears there) — a designer-placed widget
+  leaves them null, so guard consumers (e.g. `RefreshCard` guards `IsValid(Unit)`).
 - **Live Coding boundary (sharpened):** the line is *structure vs logic*. Adding/removing **any member variable** (reflected or not), adding/removing a function, or changing a function's **signature** → **full compile + UE restart** (they change the class's memory layout / function table). Only changes **inside an existing function body** (new logic, values, log lines) are Live-Coding-safe. Analogy: values patch live, structure needs a build.
 - **New `UFUNCTION`/`UPROPERTY` don't appear in Blueprint search until a full editor restart** — a successful compile alone isn't enough (bit us twice: `ArmAbility`, `BindToTurnManager`).
 - **Blueprint "Cast To" search strips the leading type-prefix letter** — search `Cast To TacticalPlayerController`, NOT `Cast To ATacticalPlayerController`.
@@ -409,3 +451,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 32 | **Juice pass — rigged shelf detonation**: telegraph sequence (freeze enemy → "!!" beat → crush), C++ camera shake on the tactical rig (`TriggerShake`, PlayerCameraManager shakes don't work on it), topple Timeline with a base-hinge `Pivot` component + `OnConstruction` WYSIWYG lift, directional (front/back) blast rectangle. `BlueprintImplementableEvent` `OnDetonated`/`OnTelegraph` = C++-decides-when, BP-decides-look. | ✓ |
 | 33 | **Block H pt2** — Intimidate reworked to AoE fear/displacement (roll → fling away from Nameless via ECC_Pawn capsule sweep → impact + mutual damage → herd into rigged shelves); Provoke→Confuse rename (tag + redirect + button + Embolden hidden); Confuse now 1 turn (Infinite GE stripped in EndTurnNow); characters `FaceActor` their target before attacking. | ✓ |
 | 34 | **Tactical UX loop — Stage 1** (confirm/abort backbone): `ETargetingPhase` (Idle/Targeting/Confirming) + `PendingTarget` on the controller; click stages, `ConfirmPendingAction` fires; any-LMB-commits / RMB-steps-back; `AbilityRequiresTarget` skips Targeting for self-cast Intimidate; LMB advances dialogue (`IsDialogueActive`); Confirm=SpaceBar added. No on-screen confirm/cancel buttons (RMB/LMB only). | ✓ |
+| 35 | **Tactical UX loop — Stage 2** (forecast panel): `FAbilityForecast` struct + `GetPendingForecast` on the controller; `ABaseCharacter` card getters (`GetMana/GetMaxMana/GetCharacterLevel/GetXP/GetUnitName`); reusable `WBP_UnitCard` (RefreshCard, allegiance colour, mirrored right card via Flow Direction); `WBP_AbilityForecast` (click-through root that keeps ticking, ForecastRow toggled, Scale Box 1.6). Surfaced HUD follow-ups (command-menu turn-gating, floating HP bars, enemy forecast). | ✓ |

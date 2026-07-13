@@ -240,3 +240,23 @@ void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombat
         CameraPawn->FocusOn(ActiveCombatant->GetActorLocation() + FVector(0.f, 0.f, 150.f));
     }
 }
+
+FAbilityForecast ATacticalPlayerController::GetPendingForecast() const
+{
+    FAbilityForecast F;
+    if (TargetingPhase != ETargetingPhase::Confirming) return F; // bValid stays false
+
+    if (ArmedAbilityTag == FName("Ability.Debuff.Confuse"))
+    {
+        F.bValid        = true;
+        F.AbilityName = FText::FromString(TEXT("Confuse"));
+        F.HitChance     = 100;   // auto-applies today (a save may come in balance, J)
+        F.InflictChance = 100;
+        F.bDealsDamage  = false; // Nameless deals no direct damage → "--"
+        F.StatusName    = FText::FromString(TEXT("Confused"));
+    }
+    // TODO(I2): drive these from an ability DataTable, not a per-tag switch.
+    // TODO: Intimidate (self-AoE) gets a highlight+summary, not this arrow.
+
+    return F;
+}

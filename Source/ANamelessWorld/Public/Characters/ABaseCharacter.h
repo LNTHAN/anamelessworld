@@ -126,6 +126,24 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
     float GetMaxHealth() const;
 
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetMana() const;
+
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetMaxMana() const;
+
+    // Named GetCharacterLevel, NOT GetLevel — AActor::GetLevel() already exists
+    // (returns a ULevel*) and would clash.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetCharacterLevel() const;
+
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetXP() const;
+
+    // Display name for HUD/cards. Falls back to the actor name if no data asset.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Identity")
+    FText GetUnitName() const;
+
     // Sets bIsAttacking on the Animation Blueprint — called when an ability fires.
     UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
     void SetIsAttacking(bool bAttacking);

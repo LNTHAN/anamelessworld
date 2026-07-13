@@ -255,6 +255,31 @@ float ABaseCharacter::GetMaxHealth() const
     return Attributes->GetMaxHealth();
 }
 
+float ABaseCharacter::GetMana() const
+{
+    return Attributes->GetMana();
+}
+
+float ABaseCharacter::GetMaxMana() const
+{
+    return Attributes->GetMaxMana();
+}
+
+float ABaseCharacter::GetCharacterLevel() const
+{
+    return Attributes->GetCharacterLevel();
+}
+
+float ABaseCharacter::GetXP() const
+{
+    return Attributes->GetXP();
+}
+
+FText ABaseCharacter::GetUnitName() const
+{
+    return CharacterData ? CharacterData->CharacterName : FText::FromString(GetName());
+}
+
 float ABaseCharacter::GetDexterity() const
 {
     // Guard: Attributes should always exist after the constructor runs,
