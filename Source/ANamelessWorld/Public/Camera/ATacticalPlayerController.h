@@ -92,6 +92,30 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     FAbilityForecast GetPendingForecast() const;
 
+    // Attacker/target for an enemy's pre-strike forecast. The widget reads these
+    // (via GetActiveForecast) so one panel serves both player and enemy previews.
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
+    ABaseCharacter* ForecastAttacker = nullptr;
+
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
+    ABaseCharacter* ForecastTarget = nullptr;
+
+    // Called by AEnemyCharacter just before it strikes: builds + shows the forecast.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void ShowAttackForecast(ABaseCharacter* Attacker, ABaseCharacter* Target, FName AttackTag);
+
+    // Clears the enemy forecast (called right before the hit lands).
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    void HideAttackForecast();
+
+    // Unified read for the forecast widget. Returns true if ANY forecast is live
+    // (player Confirming OR an enemy pre-strike) and fills attacker/target/data.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    bool GetActiveForecast(
+    FAbilityForecast& OutForecast,
+    ABaseCharacter*& OutAttacker,
+    ABaseCharacter*& OutTarget) const;
+
     // Commits the staged action: fires ArmedAbilityTag at PendingTarget, then
     // returns to Idle. No-op unless we're in the Confirming phase. Bound to the
     // Confirm key and callable from a Confirm button.
@@ -139,4 +163,16 @@ private:
 
     // Clears all targeting state back to Idle in one call.
     void ResetTargeting();
+
+    // True while an enemy pre-strike forecast is showing.
+    bool bExternalForecastActive = false;
+
+    // The enemy forecast data, built in ShowAttackForecast.
+    FAbilityForecast ExternalForecast;
+
+    // Shared forecast math for both player and enemy. One place = they can't drift.
+    FAbilityForecast BuildForecast(
+    ABaseCharacter* Attacker,
+    ABaseCharacter* Target,
+    FName AbilityTag) const;
 };

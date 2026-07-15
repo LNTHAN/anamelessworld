@@ -11,6 +11,8 @@
 #include "AIController.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
+#include "Camera/ATacticalPlayerController.h"
+#include "Kismet/GameplayStatics.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -121,10 +123,34 @@ void AEnemyCharacter::AttackTarget()
 {
     if (!PendingTarget || !PendingTarget->IsAlive()) { EndTurnAfterDelay(); return; }
 
+    FaceActor(PendingTarget);   // turn to face before the preview + hit
+
+    // Show the forecast (this enemy = attacker/left, PendingTarget = right),
+    // then strike after a short beat so the player can read the incoming hit.
+    if (ATacticalPlayerController* PC = Cast<ATacticalPlayerController>(
+            UGameplayStatics::GetPlayerController(this, 0)))
+    {
+        PC->ShowAttackForecast(this, PendingTarget, PendingAttackTag.GetTagName());
+    }
+
+    GetWorldTimerManager().SetTimer(
+        ForecastTimerHandle, this, &AEnemyCharacter::ExecuteStrike, ForecastDelay, false);
+}
+
+void AEnemyCharacter::ExecuteStrike()
+{
+    // Hide the forecast the instant the hit resolves.
+    if (ATacticalPlayerController* PC = Cast<ATacticalPlayerController>(
+            UGameplayStatics::GetPlayerController(this, 0)))
+    {
+        PC->HideAttackForecast();
+    }
+
+    if (!PendingTarget || !PendingTarget->IsAlive()) { EndTurnAfterDelay(); return; }
+
     FGameplayEventData Payload;
     Payload.Target = PendingTarget;
 
-    FaceActor(PendingTarget);          
     SetIsAttacking(true);
     UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, PendingAttackTag, Payload);
 

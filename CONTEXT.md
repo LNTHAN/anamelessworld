@@ -344,6 +344,49 @@ inflict%, damage, status pill). All Blueprint UI reading C++ state off the contr
   shows/populates when `TargetingPhase == Confirming` (feeds both cards + `RefreshCard`, fills the arrow from
   `GetPendingForecast`). Spawned once via Level BP `Create Widget → Add to Viewport`.
 
+## HUD follow-up arc — DONE (three tasks, one session)
+Cleared the three HUD follow-ups surfaced during Stage 2, in dependency order.
+
+**#4 Command menu → ally-turn-only + bound to active unit** (Blueprint-only): `WBP_CommandMenu`'s
+`Setup Command Menu` now binds `PlayerCharacter→TurnManager` `OnTurnStarted`/`OnCombatEnded` (same
+decoupled pattern the camera uses). `HandleTurnStarted(ActiveCombatant)` → `IsPlayerCharacter?` →
+Visible + `SET Player Character = Cast ActiveCombatant` (retargets the menu to the active ally) / else
+Collapsed; `HandleCombatEnded` → Collapsed. Menu starts Collapsed.
+- **Bug fixed (missed first broadcast):** menu never showed when Nameless was turn 1 (bind ran AFTER
+  `StartCombat`'s first `OnTurnStarted`). Fix = **catch-up**: after binding, call `HandleTurnStarted(
+  GetCurrentCombatant())` once (guarded by `IsValid`) so the current turn is evaluated immediately.
+  Same class of bug as the camera's `BindToTurnManager` "bind before StartCombat" warning.
+
+**#3 Floating HP bars (FFT-style)** — chose FFT over BG3 hover (design call): persistent thin bars over
+heads give the whole-board HP read the manipulation loop needs (compare several enemies at once). Card =
+detailed inspection; floating bar = at-a-glance. Hover-to-inspect card deferred to Block K.
+- **C++:** new `UHealthBarWidget : UUserWidget` (Public/Private **UI/**) holding `ABaseCharacter* OwnerCharacter`
+  (same "BP inherits a C++ widget" pattern as `WBP_DialogueBox→UDialogueWidget`). `ABaseCharacter` gained a
+  `UWidgetComponent* HealthBarWidget` (Screen space, DrawSize 150×18, Z +120, **NoCollision** so it never
+  eats click traces); `BeginPlay` calls `InitWidget()` then sets `OwnerCharacter=this`.
+- **BP:** `WBP_HealthBar` (reparented to `UHealthBarWidget`) — a ProgressBar; **Percent** binding = `IsValid(
+  Owner)? GetHealth/GetMaxHealth : 0`; **Fill Color** binding = allegiance (`IsPlayerCharacter`) blue/red.
+  Set `Widget Class = WBP_HealthBar` on the inherited `HealthBar` component in all 3 character BPs.
+- **Color:** ally fill = same HUE as the card's `CardBG` navy (1A2D5A, hue ≈229°) but brightened for
+  legibility (a dark navy fill reads as near-black in a thin bar). Bar's whole-widget `Color and Opacity`
+  and `Fill Image → Tint` must be white (1,1,1,1) or they multiply the fill dark.
+- Deleted the old fixed `WBP_BattleHUD` Player/Enemy/Boss HP bars (kept the turn indicator).
+
+**#2 Enemy-turn forecast (FFT-style, attacker-left)** — the forecast panel now shows during an enemy's
+pre-strike beat, enemy = attacker on the LEFT (same "attacker-left/target-right" rule as the player's).
+- **Controller (`ATacticalPlayerController`):** refactored `GetPendingForecast` → shared
+  `BuildForecast(Attacker, Target, AbilityTag)` (Confuse / Basic 25 / Heavy 50; `TODO(I2)` for data).
+  Added enemy-forecast state (`ForecastAttacker/Target`, `bExternalForecastActive`, `ExternalForecast`) +
+  `ShowAttackForecast`/`HideAttackForecast` + **`GetActiveForecast(out Forecast, out Attacker, out Target)`**
+  — one unified read: player Confirming OR enemy pre-strike, always fills attacker/target/data.
+- **Enemy (`AEnemyCharacter`):** split `AttackTarget` → `AttackTarget` (face + `ShowAttackForecast` + start
+  `ForecastTimerHandle` for `ForecastDelay` 1.2s) → `ExecuteStrike` (`HideAttackForecast` + the actual
+  `SendGameplayEventToActor` + `EndTurnAfterDelay`). Reaches the controller via `GetPlayerController(0)`.
+- **Widget (`WBP_AbilityForecast`):** Tick rewired from 4 separate controller reads (TargetingPhase /
+  ControlledCharacter / PendingTarget / GetPendingForecast) to ONE `GetActiveForecast` node — `Return Value`
+  = show condition, `Out Attacker`→left card, `Out Target`→right card (Unit **and** its IsValid check),
+  `Out Forecast`→arrow. Because `Out Attacker` feeds the left card, the enemy lands on the attacker side.
+
 ## HUD follow-ups surfaced during Stage 2 (each its own focused task)
 1. **Command menu turn-gating (#4, do first):** `WBP_CommandMenu` is always visible + fixed → should show only
    on the player's turn and bind to the active unit (else it overlaps with multiple units). Tie to TurnManager.
@@ -452,3 +495,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 33 | **Block H pt2** — Intimidate reworked to AoE fear/displacement (roll → fling away from Nameless via ECC_Pawn capsule sweep → impact + mutual damage → herd into rigged shelves); Provoke→Confuse rename (tag + redirect + button + Embolden hidden); Confuse now 1 turn (Infinite GE stripped in EndTurnNow); characters `FaceActor` their target before attacking. | ✓ |
 | 34 | **Tactical UX loop — Stage 1** (confirm/abort backbone): `ETargetingPhase` (Idle/Targeting/Confirming) + `PendingTarget` on the controller; click stages, `ConfirmPendingAction` fires; any-LMB-commits / RMB-steps-back; `AbilityRequiresTarget` skips Targeting for self-cast Intimidate; LMB advances dialogue (`IsDialogueActive`); Confirm=SpaceBar added. No on-screen confirm/cancel buttons (RMB/LMB only). | ✓ |
 | 35 | **Tactical UX loop — Stage 2** (forecast panel): `FAbilityForecast` struct + `GetPendingForecast` on the controller; `ABaseCharacter` card getters (`GetMana/GetMaxMana/GetCharacterLevel/GetXP/GetUnitName`); reusable `WBP_UnitCard` (RefreshCard, allegiance colour, mirrored right card via Flow Direction); `WBP_AbilityForecast` (click-through root that keeps ticking, ForecastRow toggled, Scale Box 1.6). Surfaced HUD follow-ups (command-menu turn-gating, floating HP bars, enemy forecast). | ✓ |
+| 36 | **HUD follow-up arc** (3 tasks): command-menu ally-turn-gating + active-unit bind (catch-up fix for missed-first-broadcast); floating FFT HP bars (`UHealthBarWidget` + `UWidgetComponent` on ABaseCharacter, allegiance colour, deleted fixed HUD bars); enemy-turn forecast (shared `BuildForecast`/`GetActiveForecast`, `AttackTarget`→forecast beat→`ExecuteStrike`, widget rewired to one unified read, attacker-left). | ✓ |

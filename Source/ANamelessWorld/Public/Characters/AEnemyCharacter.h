@@ -52,6 +52,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Combat")
     float TurnStartDelay = 1.5f;    
 
+    // How long the forecast panel shows before this enemy's hit lands, in seconds.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Combat")
+    float ForecastDelay = 1.2f;
+
 private:
     FTimerHandle TurnEndTimerHandle;
 
@@ -75,6 +79,11 @@ private:
 
     // Fire PendingAttackTag at PendingTarget, then end the turn after the beat.
     void AttackTarget();
+
+    // Runs after ForecastDelay: hides the forecast and fires the actual strike.
+    void ExecuteStrike();
+
+    FTimerHandle ForecastTimerHandle;
 
     // Ask the AIController to path toward PendingTarget, stopping at AttackRange.
     void MoveTowardTarget();

@@ -41,6 +41,7 @@ class UAbilitySystemComponent;
 // class UDialogueComponent;
 class UGameplayEffect;    // Used for default attribute initialisation effect
 class UGameplayAbility;   // Used for the DefaultAbilities array
+class UWidgetComponent;
 
 
 // ── Class Declaration ─────────────────────────────────────────────────────────
@@ -218,6 +219,14 @@ protected:
     //UDialogueComponent* DialogueComponent;
     // Connects to the DataTable-driven branching dialogue system.
     // Defined in UDialogueComponent.h (written in Session 4+).
+
+    // ── UI Components ─────────────────────────────────────────────────
+
+    // Floating HP bar above this character's head. Created in the constructor;
+    // its OwnerCharacter is set in BeginPlay so the bar knows whose HP to show.
+    // Set the Widget Class (WBP_HealthBar) on this component in each character BP.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ANW|UI")
+    UWidgetComponent* HealthBarWidget;
 
 
     // ── GAS Configuration ────────────────────────────────────────────────────

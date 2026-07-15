@@ -27,6 +27,10 @@
 
 #include "Components/CapsuleComponent.h"
 
+#include "Components/WidgetComponent.h"
+
+#include "UI/UHealthBarWidget.h"
+
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTRUCTOR
 // ════════════════════════════════════════════════════════════════════════════
@@ -61,11 +65,17 @@ ABaseCharacter::ABaseCharacter()
     // CreateDefaultSubobject and registers it automatically.
     // After this line: AbilitySystemComponent->GetSet<UCRPGAttributeSet>() works.
 
+    // ── Floating HP bar ──────────────────────────────────────────────────────
+    HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+    HealthBarWidget->SetupAttachment(RootComponent);          // ride on the capsule
+    HealthBarWidget->SetWidgetSpace(EWidgetSpace::Screen);    // billboard: always faces camera, constant size
+    HealthBarWidget->SetDrawSize(FVector2D(150.f, 18.f));     // pixel size of the bar
+    HealthBarWidget->SetRelativeLocation(FVector(0.f, 0.f, 120.f)); // above the head (capsule half-height is 88)
+    HealthBarWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision); // never blocks clicks/traces    
 
     // ── Inventory ────────────────────────────────────────────────────────────
     // Session 3 complete — UInventoryComponent now exists, enabling this.
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
-
 
     // ── Dialogue ─────────────────────────────────────────────────────────────
     // TODO Session 4: replace with real UDialogueComponent once written.
@@ -125,6 +135,18 @@ void ABaseCharacter::BeginPlay()
 
     // Then grant abilities so they can reference the now-initialised stats.
     InitDefaultAbilities();
+
+    // Tell the floating bar whose HP to display. InitWidget() forces the widget
+    // instance to exist now (Screen-space components otherwise create it lazily
+    // on first render), so the cast below succeeds on frame one.
+    if (HealthBarWidget)
+    {
+        HealthBarWidget->InitWidget();
+        if (UHealthBarWidget* Bar = Cast<UHealthBarWidget>(HealthBarWidget->GetUserWidgetObject()))
+        {
+            Bar->OwnerCharacter = this;
+        }
+    }
 }
 
 

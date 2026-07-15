@@ -241,22 +241,85 @@ void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombat
     }
 }
 
-FAbilityForecast ATacticalPlayerController::GetPendingForecast() const
+FAbilityForecast ATacticalPlayerController::BuildForecast(
+    ABaseCharacter* Attacker, ABaseCharacter* Target, FName AbilityTag) const
 {
     FAbilityForecast F;
-    if (TargetingPhase != ETargetingPhase::Confirming) return F; // bValid stays false
 
-    if (ArmedAbilityTag == FName("Ability.Debuff.Confuse"))
+    if (AbilityTag == FName("Ability.Debuff.Confuse"))
     {
         F.bValid        = true;
-        F.AbilityName = FText::FromString(TEXT("Confuse"));
+        F.AbilityName   = FText::FromString(TEXT("Confuse"));
         F.HitChance     = 100;   // auto-applies today (a save may come in balance, J)
         F.InflictChance = 100;
         F.bDealsDamage  = false; // Nameless deals no direct damage → "--"
         F.StatusName    = FText::FromString(TEXT("Confused"));
     }
-    // TODO(I2): drive these from an ability DataTable, not a per-tag switch.
+    else if (AbilityTag == FName("Ability.Attack.Basic"))
+    {
+        F.bValid       = true;
+        F.AbilityName  = FText::FromString(TEXT("Strike"));
+        F.HitChance    = 100;    // no to-hit roll today; TODO(J) AC/save
+        F.bDealsDamage = true;
+        F.Damage       = 25;     // matches GE_DamageInstant; TODO(I2) read from data
+    }
+    else if (AbilityTag == FName("Ability.Attack.Heavy"))
+    {
+        F.bValid       = true;
+        F.AbilityName  = FText::FromString(TEXT("Heavy Strike"));
+        F.HitChance    = 100;
+        F.bDealsDamage = true;
+        F.Damage       = 50;     // matches GE_HeavyStrike; TODO(I2) read from data
+    }
     // TODO: Intimidate (self-AoE) gets a highlight+summary, not this arrow.
 
     return F;
+}
+
+FAbilityForecast ATacticalPlayerController::GetPendingForecast() const
+{
+    if (TargetingPhase != ETargetingPhase::Confirming) return FAbilityForecast();
+    return BuildForecast(ControlledCharacter, PendingTarget, ArmedAbilityTag);
+}
+
+void ATacticalPlayerController::ShowAttackForecast(
+    ABaseCharacter* Attacker, ABaseCharacter* Target, FName AttackTag)
+{
+    ForecastAttacker       = Attacker;
+    ForecastTarget         = Target;
+    ExternalForecast       = BuildForecast(Attacker, Target, AttackTag);
+    bExternalForecastActive = ExternalForecast.bValid;
+}
+
+void ATacticalPlayerController::HideAttackForecast()
+{
+    bExternalForecastActive = false;
+    ForecastAttacker        = nullptr;
+    ForecastTarget          = nullptr;
+}
+
+bool ATacticalPlayerController::GetActiveForecast(
+    FAbilityForecast& OutForecast,
+    ABaseCharacter*& OutAttacker,
+    ABaseCharacter*& OutTarget) const
+{
+    // Player's Confirming phase wins if active.
+    if (TargetingPhase == ETargetingPhase::Confirming)
+    {
+        OutForecast = GetPendingForecast();
+        OutAttacker = ControlledCharacter;   // player = attacker (left)
+        OutTarget   = PendingTarget;
+        return OutForecast.bValid;
+    }
+
+    // Otherwise, an enemy pre-strike forecast, if one is showing.
+    if (bExternalForecastActive)
+    {
+        OutForecast = ExternalForecast;
+        OutAttacker = ForecastAttacker;      // enemy = attacker (left)
+        OutTarget   = ForecastTarget;
+        return true;
+    }
+
+    return false;
 }
