@@ -27,12 +27,13 @@
 
 #include "Data/UCRPGCharacterData.h"
 
+#include "Engine/DataTable.h"   // FDataTableRowHandle — points a character at its stats row
+
 #include "Animation/AnimInstance.h"
 // For Animation
 
 #include "ABaseCharacter.generated.h"
 // Always last. UHT generates this at build time for reflection.
-
 
 // ── Forward Declarations ─────────────────────────────────────────────────────
 // We only hold pointers to these in this header — no need to #include the full
@@ -95,7 +96,8 @@ public:
     // means designers can tweak starting stats in the editor without recompiling.
     void InitDefaultAttributes();
 
-
+    bool InitStatsFromRow();
+    
     // ── UTurnManager Interface ───────────────────────────────────────────────
     // UTurnManager cannot touch Attributes or bIsDead directly (they are protected).
     // These two functions are the controlled window UTurnManager uses instead.
@@ -248,6 +250,13 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Data")
     UCRPGCharacterData* CharacterData;
+
+    // Which row of DT_Characters holds this character's balance numbers. Set per
+    // character Blueprint (table = DT_Characters, row = Nameless / Narrator / etc.).
+    // The RowType meta filters the editor picker to our struct only.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Data",
+        meta = (RowType = "/Script/ANamelessWorld.CRPGCharacterRow"))
+    FDataTableRowHandle CharacterRowHandle;
 
     // ── State ────────────────────────────────────────────────────────────────
 

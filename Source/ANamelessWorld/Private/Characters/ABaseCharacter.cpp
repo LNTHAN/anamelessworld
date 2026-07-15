@@ -31,6 +31,8 @@
 
 #include "UI/UHealthBarWidget.h"
 
+#include "Data/CRPGCharacterRow.h"
+
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTRUCTOR
 // ════════════════════════════════════════════════════════════════════════════
@@ -129,9 +131,12 @@ void ABaseCharacter::BeginPlay()
     GetCapsuleComponent()->bDynamicObstacle = true;
     GetCapsuleComponent()->SetCanEverAffectNavigation(true);
 
-    // Initialise attributes first — we need valid stat values before granting
-    // abilities (some ability costs reference Mana, which must exist).
-    InitDefaultAttributes();
+    // Prefer the DataTable row (spreadsheet-driven stats); fall back to the legacy
+    // stat-init GameplayEffect only when no row is assigned.
+    if (!InitStatsFromRow())
+    {
+        InitDefaultAttributes();
+    }
 
     // Then grant abilities so they can reference the now-initialised stats.
     InitDefaultAbilities();
@@ -208,6 +213,35 @@ void ABaseCharacter::InitDefaultAttributes()
     {
         AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
     }
+}
+
+bool ABaseCharacter::InitStatsFromRow()
+{
+    if (!AbilitySystemComponent || CharacterRowHandle.IsNull()) return false;
+
+    const FCRPGCharacterRow* Row =
+        CharacterRowHandle.GetRow<FCRPGCharacterRow>(TEXT("InitStatsFromRow"));
+    if (!Row) return false;   // handle set but row missing / wrong struct
+
+    // Max pools first, then current starts full. Init* sets the attribute's base
+    // value directly (no GameplayEffect, no clamp callback) — right for spawn-time.
+    Attributes->InitMaxHealth(Row->MaxHealth);
+    Attributes->InitMaxMana(Row->MaxMana);
+    Attributes->InitHealth(Row->MaxHealth);
+    Attributes->InitMana(Row->MaxMana);
+
+    // The six D&D scores (int in the sheet, applied as float attributes).
+    Attributes->InitStrength(Row->Strength);
+    Attributes->InitDexterity(Row->Dexterity);
+    Attributes->InitConstitution(Row->Constitution);
+    Attributes->InitIntelligence(Row->Intelligence);
+    Attributes->InitWisdom(Row->Wisdom);
+    Attributes->InitCharisma(Row->Charisma);
+
+    // Non-attribute tunable that also lives in the row.
+    MoveRange = Row->MoveRange;
+
+    return true;
 }
 
 // ════════════════════════════════════════════════════════════════════════════

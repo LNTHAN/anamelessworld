@@ -13,6 +13,7 @@
 #include "NavigationPath.h"
 #include "Camera/ATacticalPlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Data/CRPGCharacterRow.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -21,10 +22,18 @@ AEnemyCharacter::AEnemyCharacter()
 void AEnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
-    // Combat setup is handled by SetupCombat(), called from the Level Blueprint.
-    // If a CharacterData asset is assigned, override the hardcoded HeavyStrikeChance.
-    // This lets the Data Asset be the single source of truth for AI behaviour tuning.
-    if (CharacterData)
+
+    // Prefer the DataTable row for AI tuning; fall back to the legacy Data Asset
+    // so any enemy without a row assigned still behaves.
+    const FCRPGCharacterRow* Row = CharacterRowHandle.IsNull()
+        ? nullptr
+        : CharacterRowHandle.GetRow<FCRPGCharacterRow>(TEXT("EnemyBeginPlay"));
+
+    if (Row)
+    {
+        HeavyStrikeChance = Row->HeavyStrikeChance;
+    }
+    else if (CharacterData)
     {
         HeavyStrikeChance = CharacterData->HeavyStrikeChance;
     }

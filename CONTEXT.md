@@ -1,5 +1,54 @@
 # ANamelessWorld — Session Context
 
+## ▶ NEXT SESSION: Block J — AI, boss & encounter + balance
+Unblocked now that I2's data layer exists. Scope: boss pursuit AI (the fast/ranged **unkitable
+clock**), **status immunity** (read the `bStatusImmune` flag already sitting in DT_Characters →
+block status GEs via an Application Tag Requirement on each status GE + guard Intimidate's C++
+displacement sweep), encounter layout / mob count, and a **balance pass** (retune DT_Characters
+cells → tight, winnable, fun). **⚠ Locked §6 movement rule:** DT_Characters currently has Nameless
+MoveRange 700 > boss 500 — that lets Nameless kite the boss forever, which the design explicitly
+rejects. Equalize (boss ≥ Nameless) during the balance pass. See ROADMAP Block J + DESIGN_RATIONALE §6.
+
+## Block I2 — data-driven stats (DataTables) — DONE
+Character balance numbers now live in a spreadsheet, read at spawn. CSV import/export **deliberately
+deferred** — UE's in-editor DataTable grid is enough for 3 rows; flip CSV on later with no rework
+(the struct is identical either way). Kept the numbers-vs-asset-refs split (§8): DataTable = numbers,
+`UCRPGCharacterData` Data Asset = asset references (abilities, GE classes).
+- **Schema:** `FCRPGCharacterRow : FTableRowBase` (Public/Data/CRPGCharacterRow.h) — DisplayName,
+  MaxHealth/MaxMana, the 6 D&D scores, MoveRange, HeavyStrikeChance, **bStatusImmune** (capability
+  flag, not an archetype; any unit can carry it). XP/Level deliberately omitted (Block H2's job).
+- **Table:** `DT_Characters` (Content/Data/) — 3 rows authored in the editor grid: `Nameless`,
+  `Narrator`, `Protagonist`.
+- **Read path:** `FDataTableRowHandle CharacterRowHandle` on ABaseCharacter (EditDefaultsOnly, RowType
+  meta filters the picker to our struct). New `ABaseCharacter::InitStatsFromRow()` (called first in
+  BeginPlay; **legacy DefaultAttributeEffect GE is the fallback if it returns false**) sets AttributeSet
+  base values via the `Init*` accessors (Max first, then current = full) + MoveRange, from the row.
+  `AEnemyCharacter::BeginPlay` reads HeavyStrikeChance from the row (Data Asset fallback).
+- **BP wiring:** each character BP → Class Defaults → Character Row Handle = DT_Characters + its row.
+- **Verified:** floating HP bars show the table's Max values (boss 150 / enemy 80 / Nameless 100);
+  Heavy-Strike log thresholds read 30 (Narrator) / 60 (Protagonist) from the table.
+- **`bStatusImmune` has no consumer yet** — it rides in the data until Block J builds the behaviour.
+- **Decision — auto-lookup vs. hand-wired row handle:** kept the per-BP handle (set-once for 3 chars;
+  the thing you tune often — the numbers — is already frictionless). If the roster grows, the clean
+  upgrade is an `FName StatRowName` on the existing Data Asset + one shared default table (option 2),
+  NOT a C++ per-class key (loses the designer-editable benefit) and NOT name-convention matching (magic,
+  breaks silently).
+
+### Decision — J moved back behind I2 (revert to roadmap's authored order)
+The deadline SCOPE-LOCK had pulled **J (boss + balance) to priority #2** (climax first). Reversed:
+**I2 now precedes J**, matching ROADMAP's authored order. Reason: the boss's spine — **status
+immunity** — is really two things: (1) *who* is immune = **data** (a `bStatusImmune` cell any unit
+can carry), and (2) *what immunity does* = gameplay logic (status GE refuses to apply when the
+target owns the immunity tag; Intimidate's C++ sweep skips immune units). Building I2 first lets J
+read immunity from a data flag instead of a hardcoded per-class `AddLooseGameplayTag`, so the
+assignment is built once, data-driven — cleaner architecture (and it reads well to the grader).
+Prefer a **capability flag (`bStatusImmune`)** over an archetype label literally named "Boss" — the
+flag stays honest about the mechanic (immune non-boss elites / feareable bosses stay possible). A
+"Boss" archetype row can still *set* that flag among others. J itself is otherwise unchanged: boss
+pursuit AI, encounter layout / mob count, balance pass. HUD arc (command-menu gating, floating HP
+bars, enemy forecast) is DONE + committed (837effd).
+
+
 ## Last Session (large — spanned integration, a full redesign, and Block G start)
 
 **Battle-start cinematic wired** into TestLevel Level BP: ChapterCard (over idle field) → dialogue → BattleCommenced → combat. Made **WBP_CutsceneScreen reusable** (SlideImages/SlideTexts exposed + Instance Editable/Expose-on-Spawn; `OnFinished` event dispatcher replaced hardcoded Open Level; Branch uses `SlideImages.Length`). Fixed: dialogue box hidden until a line plays; all battle UI revealed together after BattleCommenced (deleted a stale validated-GET that dead-ended the chain).
@@ -419,7 +468,7 @@ high-value polish + a satisfying climax, NOT obligation. Priority order:
 3. **Full loop wiring** — intro → battle → **win AND lose** screens → outro (a complete experience).
 4. **Flair the user wants** (the fun part): retreat + collision animation (Intimidate's smooth panic-slide + fall-over,
    replacing the teleport), **floating combat text / ability damage numbers**, ability VFX, more screenshake, UI skin/juice.
-5. **I2 data architecture** (portfolio value — shows clean architecture to a grader) + turn-based status-duration system; **H2** progression as time allows.
+5. **I2 data architecture** (portfolio value — shows clean architecture to a grader) + turn-based status-duration system; **H2** progression as time allows. **NOTE: I2 is now *sequenced* before J** (see "Decision — J moved back behind I2" up top) so J's status-immunity flag is data-driven from the start — even though J outranks I2 on raw deliverable value. Keep I2 time-boxed so it doesn't eat J's sessions.
 - **Guard the critical path from rabbit holes** — time-box exploration, ship "good enough." A complete rough slice beats a gorgeous half-finished one for a grade.
 - Leave the last ~1–1.5 weeks as a **playtest/balance/bug-fix buffer**.
 
@@ -496,3 +545,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 34 | **Tactical UX loop — Stage 1** (confirm/abort backbone): `ETargetingPhase` (Idle/Targeting/Confirming) + `PendingTarget` on the controller; click stages, `ConfirmPendingAction` fires; any-LMB-commits / RMB-steps-back; `AbilityRequiresTarget` skips Targeting for self-cast Intimidate; LMB advances dialogue (`IsDialogueActive`); Confirm=SpaceBar added. No on-screen confirm/cancel buttons (RMB/LMB only). | ✓ |
 | 35 | **Tactical UX loop — Stage 2** (forecast panel): `FAbilityForecast` struct + `GetPendingForecast` on the controller; `ABaseCharacter` card getters (`GetMana/GetMaxMana/GetCharacterLevel/GetXP/GetUnitName`); reusable `WBP_UnitCard` (RefreshCard, allegiance colour, mirrored right card via Flow Direction); `WBP_AbilityForecast` (click-through root that keeps ticking, ForecastRow toggled, Scale Box 1.6). Surfaced HUD follow-ups (command-menu turn-gating, floating HP bars, enemy forecast). | ✓ |
 | 36 | **HUD follow-up arc** (3 tasks): command-menu ally-turn-gating + active-unit bind (catch-up fix for missed-first-broadcast); floating FFT HP bars (`UHealthBarWidget` + `UWidgetComponent` on ABaseCharacter, allegiance colour, deleted fixed HUD bars); enemy-turn forecast (shared `BuildForecast`/`GetActiveForecast`, `AttackTarget`→forecast beat→`ExecuteStrike`, widget rewired to one unified read, attacker-left). | ✓ |
+| 37 | **Block I2 — data-driven stats**: `FCRPGCharacterRow : FTableRowBase` schema + `DT_Characters` DataTable (3 rows in the editor grid, CSV deferred); `FDataTableRowHandle` on ABaseCharacter → `InitStatsFromRow()` sets AttributeSet base values (`Init*` accessors) + MoveRange from the row, legacy stat-init GE as fallback; `AEnemyCharacter` HeavyStrikeChance from the row. `bStatusImmune` staged in data for Block J. Reordered J behind I2 so immunity is data-driven from the start. | ✓ |
