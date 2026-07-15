@@ -49,6 +49,25 @@ pursuit AI, encounter layout / mob count, balance pass. HUD arc (command-menu ga
 bars, enemy forecast) is DONE + committed (837effd).
 
 
+## Walk animation + camera follow — DONE (short pass on top of I2)
+Movement now animates, and the camera trails the mover. Both driven by the **same signal** — the
+pawn's `GetVelocity()` magnitude ("is it walking?").
+- **Walk anim (all 3 AnimBPs):** each AnimBP got a float `Speed` (EventGraph: Try Get Pawn Owner →
+  Get Velocity → Vector Length → Set Speed) and a **Walk state added INSIDE the existing Combat State
+  Machine** (Idle stays the hub, untouched; Idle→Walk when `Speed > 10`, Walk→Idle when `Speed < 10`).
+  Used the **InPlace** walk-forward clips — travel is CharacterMovement-velocity-driven, and Root Motion
+  Mode stays "from Montages Only" so a state-played clip's root motion is ignored anyway. Foot-slide
+  tuned via **Max Walk Speed** per character: **Nameless 175, Boss 175, Enemy 250**. Each character BP:
+  **Orient Rotation to Movement = ON**, Use Controller Rotation Yaw = OFF (so they face their path).
+- **Camera follow (`ATacticalCameraPawn`):** new `FollowTarget` + `SetFollowTarget()`; the controller's
+  `OnCombatTurnStarted` points it at the active combatant (alongside the existing turn-start `FocusOn`).
+  Tick: while `FollowTarget->GetVelocity()` exceeds `FollowMoveThreshold` (10), it re-aims `TargetLocation`
+  at them (+`FollowHeightOffset` 150) and sets `bIsFocusing = true` — **reuses the existing FocusOn easing**
+  instead of a parallel follow system, so the camera trails smoothly and, when they stop, settles and
+  leaves manual WASD panning free (the same courtesy FocusOn already had). Trail speed = `FocusPanSpeed` (4).
+- **Note:** this is Block K (clarity/feedback) flavour pulled forward because it rode naturally on the
+  movement work — not a scope change. `bStatusImmune`/Block J still next.
+
 ## Last Session (large — spanned integration, a full redesign, and Block G start)
 
 **Battle-start cinematic wired** into TestLevel Level BP: ChapterCard (over idle field) → dialogue → BattleCommenced → combat. Made **WBP_CutsceneScreen reusable** (SlideImages/SlideTexts exposed + Instance Editable/Expose-on-Spawn; `OnFinished` event dispatcher replaced hardcoded Open Level; Branch uses `SlideImages.Length`). Fixed: dialogue box hidden until a line plays; all battle UI revealed together after BattleCommenced (deleted a stale validated-GET that dead-ended the chain).
@@ -546,3 +565,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 35 | **Tactical UX loop — Stage 2** (forecast panel): `FAbilityForecast` struct + `GetPendingForecast` on the controller; `ABaseCharacter` card getters (`GetMana/GetMaxMana/GetCharacterLevel/GetXP/GetUnitName`); reusable `WBP_UnitCard` (RefreshCard, allegiance colour, mirrored right card via Flow Direction); `WBP_AbilityForecast` (click-through root that keeps ticking, ForecastRow toggled, Scale Box 1.6). Surfaced HUD follow-ups (command-menu turn-gating, floating HP bars, enemy forecast). | ✓ |
 | 36 | **HUD follow-up arc** (3 tasks): command-menu ally-turn-gating + active-unit bind (catch-up fix for missed-first-broadcast); floating FFT HP bars (`UHealthBarWidget` + `UWidgetComponent` on ABaseCharacter, allegiance colour, deleted fixed HUD bars); enemy-turn forecast (shared `BuildForecast`/`GetActiveForecast`, `AttackTarget`→forecast beat→`ExecuteStrike`, widget rewired to one unified read, attacker-left). | ✓ |
 | 37 | **Block I2 — data-driven stats**: `FCRPGCharacterRow : FTableRowBase` schema + `DT_Characters` DataTable (3 rows in the editor grid, CSV deferred); `FDataTableRowHandle` on ABaseCharacter → `InitStatsFromRow()` sets AttributeSet base values (`Init*` accessors) + MoveRange from the row, legacy stat-init GE as fallback; `AEnemyCharacter` HeavyStrikeChance from the row. `bStatusImmune` staged in data for Block J. Reordered J behind I2 so immunity is data-driven from the start. | ✓ |
+| 38 | **Walk animation + camera follow** (short pass on top of I2): per-AnimBP `Speed` var + Walk state inside the existing Combat State Machine (InPlace clips, Speed>10/<10, Orient-to-Movement, Max Walk Speed 175/175/250 for Nameless/Boss/Enemy); camera trails the active combatant while walking via `SetFollowTarget` + a velocity-gated Tick re-aim that reuses FocusOn's easing. | ✓ |

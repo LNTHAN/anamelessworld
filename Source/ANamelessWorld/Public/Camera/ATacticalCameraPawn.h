@@ -79,6 +79,10 @@ public:
     // FocusZoom. Called by the controller whenever a combatant's turn starts.
     void FocusOn(const FVector& WorldLocation);
 
+    // Sets the actor the camera trails while it walks. The controller points this
+    // at whoever's turn it is; null = follow nobody.
+    void SetFollowTarget(AActor* InTarget);
+
     // Kicks off a short camera shake. Called from Blueprints (the rigged shelf's
     // OnDetonated) for impact. Rotates our own camera component directly — the
     // PlayerCameraManager shake system doesn't apply to this decoupled rig.
@@ -121,6 +125,22 @@ private:
     float ShakeFrequency = 30.0f;
 
     float ShakeTimeRemaining = 0.0f;
+
+    // The combatant the camera trails while they move. Only steers the camera
+    // while this actor's speed exceeds FollowMoveThreshold — so a standing unit
+    // never locks the camera and manual panning stays free between moves.
+    UPROPERTY()
+    AActor* FollowTarget = nullptr;
+
+    // Speed (uu/s) above which FollowTarget is considered "walking". Matches the
+    // animation's Speed>10 idea.
+    UPROPERTY(EditAnywhere, Category = "ANW|Camera|Tuning")
+    float FollowMoveThreshold = 10.f;
+
+    // Height offset so the pivot sits above the head, not inside the capsule
+    // (same reason as the turn-start focus offset).
+    UPROPERTY(EditAnywhere, Category = "ANW|Camera|Tuning")
+    float FollowHeightOffset = 150.f;
 
 public:
     virtual void Tick(float DeltaSeconds) override;

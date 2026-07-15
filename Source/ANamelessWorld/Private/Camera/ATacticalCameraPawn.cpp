@@ -111,6 +111,11 @@ void ATacticalCameraPawn::FocusOn(const FVector& WorldLocation)
     bIsFocusing = true;
 }
 
+void ATacticalCameraPawn::SetFollowTarget(AActor* InTarget)
+{
+    FollowTarget = InTarget;
+}
+
 void ATacticalCameraPawn::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -118,6 +123,18 @@ void ATacticalCameraPawn::Tick(float DeltaSeconds)
     // Ease the boom toward the desired length for smooth zoom.
     SpringArm->TargetArmLength =
         FMath::FInterpTo(SpringArm->TargetArmLength, TargetZoom, DeltaSeconds, 10.f);
+
+    // While the followed combatant is actually walking, keep re-aiming the focus
+    // target at them. We ride the same easing path below (bIsFocusing), so the
+    // camera trails smoothly; when they stop we stop steering and it settles,
+    // leaving manual panning free — exactly like FocusOn's own courtesy.
+    if (FollowTarget && FollowTarget->GetVelocity().SizeSquared()
+            > FMath::Square(FollowMoveThreshold))
+    {
+        TargetLocation = FollowTarget->GetActorLocation()
+            + FVector(0.f, 0.f, FollowHeightOffset);
+        bIsFocusing = true;
+    }
 
     // Ease toward the focus target ONLY while a transition is active. Once
     // it converges, stop touching location entirely — checking distance

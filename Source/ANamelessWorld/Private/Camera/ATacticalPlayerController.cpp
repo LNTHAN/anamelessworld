@@ -238,6 +238,7 @@ void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombat
         // exactly on the capsule center puts the pivot inside their own
         // collision, which immediately triggers the spring arm's wall pull-in.
         CameraPawn->FocusOn(ActiveCombatant->GetActorLocation() + FVector(0.f, 0.f, 150.f));
+        CameraPawn->SetFollowTarget(ActiveCombatant);
     }
 }
 
