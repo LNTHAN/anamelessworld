@@ -24,6 +24,15 @@ Menu → Intro Slides → Chapter Card → Pre-battle Dialogue → Battle Commen
 
 ---
 
+## Delivery schedule — LOCKED to Aug 15 2026 (set 2026-07-16)
+Coding-school final; passable demonstrable build due **Aug 15 2026**. Critical path ≈ 11–13 sessions, so there is margin — the real risk is scope creep in polish (K) and art (M), not time.
+- **Wk1 (Jul 16–22) — Block J:** status immunity + 3 mobs + layout + balance → winnable boss fight.
+- **Wk2 (Jul 23–29) — Block L finish:** win/lose + "World Finished" + endings + Ch2 teaser → **complete playable loop (passable-build milestone).**
+- **Wk3 (Jul 30–Aug 5):** Block K legibility (enemy-intent indicators + damage numbers) + start Block N onboarding.
+- **Wk4 (Aug 6–12):** finish onboarding + **light** Block M art (floor material + one real shelf) + H2 if time.
+- **Aug 13–15:** buffer — playtest / balance / bug-fix, no new features.
+- **Cut order if slipping:** H2 → full M art (keep light) → Tier-2 danger overlays.
+
 ## Phase 1 — World 1 / Chapter 1 (to near-final quality)
 
 ### Block G — Movement foundation
@@ -55,7 +64,10 @@ Movement-range & ability-range/AoE indicators, threat telegraphs, status icons, 
 ### Block L — Cinematic chapter loop
 Chapter card + Battle Commenced (done). Ending slides → World Finished → Chapter 2 teaser, reusing the configurable cutscene widget.
 
-### Block M — Onboarding
+### Block M — Environment art pass (de-greybox)
+Swap the greybox floor / walls / shelves for **sourced** meshes + materials (Synty/Fab — *source, don't create*; the user is a coder). Near-zero code: wires into existing actors — the rigged shelf's base-hinge `Pivot` + auto-sized blast rectangle already carry a real bookshelf model, and there's a standing deferred note to swap the greybox cube. **Time-boxed, downstream of the boss fight (J) + the full loop (L)** — environment art is a classic rabbit hole and this is a *coding* final. A **light** version (a decent floor material + one real shelf mesh) may be pulled forward for a demo/morale boost without opening the full pass.
+
+### Block N — Onboarding
 Teach the manipulation loop. **Last** — only once mechanics are frozen.
 
 ---

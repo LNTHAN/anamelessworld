@@ -73,6 +73,21 @@ void UGA_Intimidate::ActivateAbility(
         if (!Enemy || Enemy->IsPlayerCharacter() || !Enemy->IsAlive()) continue;
         if (FVector::Dist(CasterLoc, Enemy->GetActorLocation()) > IntimidateRadius) continue;
 
+        // Status-immune units (the boss) shrug off fear — never displaced. This
+        // skip is ONLY here in the "who gets flung" loop: a status-immune unit can
+        // still TAKE collision damage from a mob flung into it (handled in
+        // DisplaceEnemy), because that's damage, not a status.
+        if (UAbilitySystemComponent* ImmuneCheckASC = Enemy->GetAbilitySystemComponent())
+        {
+            if (ImmuneCheckASC->HasMatchingGameplayTag(
+                    FGameplayTag::RequestGameplayTag(FName("Immunity.Status"))))
+            {
+                UE_LOG(LogTemp, Log,
+                    TEXT("GA_Intimidate: %s is status-immune — not displaced."), *Enemy->GetName());
+                continue;
+            }
+        }
+
         UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent();
         const UCRPGAttributeSet* EA = EnemyASC ? Cast<UCRPGAttributeSet>(
             EnemyASC->GetAttributeSet(UCRPGAttributeSet::StaticClass())) : nullptr;

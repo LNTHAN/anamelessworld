@@ -241,6 +241,16 @@ bool ABaseCharacter::InitStatsFromRow()
     // Non-attribute tunable that also lives in the row.
     MoveRange = Row->MoveRange;
 
+    // Data-driven status immunity: a unit whose row flags bStatusImmune owns the
+    // Immunity.Status tag permanently. Confuse's GameplayEffect will refuse to apply
+    // to a tag-holder (Step 2), and Intimidate's C++ sweep will skip them (Step 3).
+    // Capability flag, not an archetype — any unit can carry it.
+    if (Row->bStatusImmune)
+    {
+        AbilitySystemComponent->AddLooseGameplayTag(
+            FGameplayTag::RequestGameplayTag(FName("Immunity.Status")));
+    }
+
     return true;
 }
 

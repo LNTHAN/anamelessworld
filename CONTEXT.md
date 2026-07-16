@@ -9,6 +9,29 @@ cells → tight, winnable, fun). **⚠ Locked §6 movement rule:** DT_Characters
 MoveRange 700 > boss 500 — that lets Nameless kite the boss forever, which the design explicitly
 rejects. Equalize (boss ≥ Nameless) during the balance pass. See ROADMAP Block J + DESIGN_RATIONALE §6.
 
+### Block J design — locked with user (only ONE new logic piece)
+The only genuinely NEW *logic* in J is **status immunity**: the tag + boss grants it + Confuse's
+GameplayEffect gets an **Application Tag Requirement** (refuses to apply to an immunity-tag holder)
++ Intimidate's C++ displacement sweep **skips** immune units. Everything else already works —
+boss pursuit (`AEnemyCharacter` already fixates on `PlayerTarget`, paths around the maze, strikes),
+baiting the boss through an armed shelf (springs on *enemy*-entry; the boss is an enemy), confused-mob-
+hits-boss and Intimidate-flings-mob-into-boss (both are DAMAGE, not status, so they already land;
+`FindNearestOtherCombatant` already includes the boss). **So J = 1 small code task + a balance pass
+(`DT_Characters`) + layout tweaks.**
+- **Boss damage solution space** (the puzzle — all indirect, never a direct hit): (1) a confused mob
+  strikes the boss (maneuver so the boss is the mob's *nearest* target), (2) bait the boss's pursuit
+  through an armed rigged shelf, (3) Intimidate a mob INTO the boss (collision mutual damage).
+- **Immunity scope (confirmed):** boss immune to BOTH Confuse AND Intimidate-displacement (can't be
+  shoved onto a hazard — that would break the puzzle). Damage from flung mobs / shelf crush / confused
+  hits still lands normally.
+- **Mob count = 3** (chosen — livelier manipulation puzzle). Setup only: drop 3 `BP_EnemyCharacter` in
+  the level + wire each into `SetupCombat` / initiative (TurnManager already handles an arbitrary roster).
+- **Boss = melee-fast + relentless pursuit for Phase 1**; ranged deferred (no ranged system exists;
+  terrain already supplies the "can't just walk away" tension). MoveRange boss ≥ Nameless.
+- **Balance race math:** boss ~150 HP, a Heavy ~50 → ~3 indirect hits to fell him; boss ~25–50/turn vs
+  Nameless's 100 → a ~2–4 turn survival budget. Tune so "3 hits in 3–4 turns" is achievable-but-demanding,
+  and so all three tools feel *needed* (Confuse too slow alone, shelves too few alone, Intimidate for space).
+
 ## Block I2 — data-driven stats (DataTables) — DONE
 Character balance numbers now live in a spreadsheet, read at spawn. CSV import/export **deliberately
 deferred** — UE's in-editor DataTable grid is enough for 3 rows; flip CSV on later with no rework
@@ -74,7 +97,7 @@ pawn's `GetVelocity()` magnitude ("is it walking?").
 
 **Repo hygiene:** scrubbed ALL Claude/AI mentions from git history + tracked files; ignore rules for CLAUDE.md/AGENTS.md/memory/.claude moved to local `.git/info/exclude`. Repo is shown to teacher — keep it clean, **no co-author trailers, no AI mentions anywhere**.
 
-**Phase 1 redesigned → depth-first** ("World 1 / Chapter 1 to near-final quality"); Phase 2 = breadth. New blocks **G–M** in ROADMAP.md.
+**Phase 1 redesigned → depth-first** ("World 1 / Chapter 1 to near-final quality"); Phase 2 = breadth. New blocks **G–N** in ROADMAP.md (M = environment art pass / de-greybox, N = onboarding).
 
 **Combat design locked** (DESIGN_RATIONALE §6): Nameless = **pure manipulation, zero direct damage**. **Confuse** (nearest-creature, dmg-buff + low accuracy) replaces Provoke. **Boss immune to status** = unkitable clock, killed via confused mobs + environment. **Intimidate** → displacement/AoE. **Embolden** → Chapter 2 (needs a companion). **Interact** = core verb (Ch1 = rigged bookshelves). Movement ≈ equal; safety from control, not speed.
 
@@ -479,9 +502,19 @@ cluster (verify the Level BP no longer writes `AllTargets` first). Also the play
 and the shelf's dormant `TriggerSphere`/`OnSphereBeginOverlap`. Do it as its own commit, separate from features.
 
 ## SCOPE LOCKED — deadline-driven (see memory [[deadline-coding-final]])
-Build doubles as a **coding-school final, needs a passable demonstrable build by end of Aug 2026** (~50 daily
-sessions from 2026-07-09). **The current state is already roughly passable** — so remaining work is
-high-value polish + a satisfying climax, NOT obligation. Priority order:
+Build doubles as a **coding-school final. DEADLINE LOCKED: Aug 15 2026** (set 2026-07-16, ~30 days out;
+tightened from the original end-of-Aug). **The current state is already roughly passable** — so remaining
+work is high-value polish + a satisfying climax, NOT obligation.
+
+### Locked week-by-week plan (→ Aug 15)
+- **Wk1 (Jul 16–22) — Block J:** status immunity (1 code task) + 3-mob setup + layout + balance → a winnable, tuned boss fight.
+- **Wk2 (Jul 23–29) — Block L finish:** win/lose screens + "World Finished" + ending slides + Ch2 teaser → **complete playable loop (the milestone — passable build reached here).**
+- **Wk3 (Jul 30–Aug 5):** Block K legibility (enemy-intent indicators + floating damage numbers) + start Block N onboarding.
+- **Wk4 (Aug 6–12):** finish onboarding + a **light** Block M art pass (floor material + one real shelf) + H2 only if time.
+- **Aug 13–15 — buffer:** playtest / balance / bug-fix. **NO new features.**
+- Critical path ≈ 11–13 sessions → comfortable margin. **If slipping, cut in this order:** H2 → full M art (keep the light version) → Tier-2 danger overlays. **The risk is scope creep in K/M, not time.**
+
+Priority order:
 1. **Tactical UX loop** (above) — makes the battle flow feel right.
 2. **Boss encounter + balance** (J) — the climax that proves the manipulation combat; single highest-value deliverable.
 3. **Full loop wiring** — intro → battle → **win AND lose** screens → outro (a complete experience).

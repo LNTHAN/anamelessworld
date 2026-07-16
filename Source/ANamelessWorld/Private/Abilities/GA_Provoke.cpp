@@ -86,13 +86,23 @@ void UGA_Provoke::ActivateAbility(
                 ProvokeEffectClass, GetAbilityLevel(), ContextHandle);
 
         if (SpecHandle.IsValid())
-        {
-            TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+            {
+                const FActiveGameplayEffectHandle AppliedHandle =
+                    TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
-            const FString TargetName = TargetCharacter->GetName();
-            UE_LOG(LogTemp, Log,
-                TEXT("GA_Provoke: %s is now Confused — will attack the nearest combatant on their next turn."),
-                *TargetName);
+                const FString TargetName = TargetCharacter->GetName();
+                if (AppliedHandle.WasSuccessfullyApplied())
+                {
+                    UE_LOG(LogTemp, Log,
+                        TEXT("GA_Provoke: %s is now Confused — will attack the nearest combatant on their next turn."),
+                        *TargetName);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Log,
+                        TEXT("GA_Provoke: %s resisted Confuse (status-immune) — effect refused to apply."),
+                        *TargetName);
+                }
         }
     }
     else
