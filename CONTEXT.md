@@ -1,13 +1,47 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block J — AI, boss & encounter + balance
-Unblocked now that I2's data layer exists. Scope: boss pursuit AI (the fast/ranged **unkitable
-clock**), **status immunity** (read the `bStatusImmune` flag already sitting in DT_Characters →
-block status GEs via an Application Tag Requirement on each status GE + guard Intimidate's C++
-displacement sweep), encounter layout / mob count, and a **balance pass** (retune DT_Characters
-cells → tight, winnable, fun). **⚠ Locked §6 movement rule:** DT_Characters currently has Nameless
-MoveRange 700 > boss 500 — that lets Nameless kite the boss forever, which the design explicitly
-rejects. Equalize (boss ≥ Nameless) during the balance pass. See ROADMAP Block J + DESIGN_RATIONALE §6.
+## ▶ NEXT SESSION: Block J continues — 3-mob encounter, then damage system, then balance
+Status immunity is DONE + committed (510311e). Remaining J work, in this locked order:
+1. **3-mob setup + layout** — drop 2 more `BP_EnemyCharacter` in TestLevel + wire each into
+   `SetupCombat`/initiative in the Level BP (TurnManager already handles any roster). Layout: rigged
+   shelves as bait-lanes on the boss's pursuit path, mobs placed near the boss (so a confused mob's
+   "nearest" can BE the boss), kiting room + chokepoints.
+2. **Damage system + honest forecast** (~1 session) — damage = per-attack BASE (new `AttackDamage`/
+   `HeavyDamage` columns in DT_Characters) + attacker's STR modifier, injected via **SetByCaller**
+   (ability computes the number at cast time, one damage GE serves everyone; retire the flat
+   GE_DamageInstant −25 / GE_HeavyStrike −50 numbers). Forecast `BuildForecast` Hit% is hardcoded →
+   compute for real: **P(hit) = (21 − (AC − attackerMod)) / 20**, clamp [5%,95%]; Advantage
+   `1−(1−p)²`, Disadvantage `p²`. NOTE: **Confuse's Inflict 100% is truthful BY DESIGN** (§6 — the
+   gamble is the confused unit's Disadvantage attack, not the application). Keep it.
+3. **Balance pass** — only after mobs exist + numbers are honest. MoveRange already fixed in the
+   table (Nameless 500 / boss 600 — §6 rule satisfied).
+Sequencing rationale: mobs first (balance must see the real encounter), honest numbers second
+(don't tune against lies), tuning last.
+
+## Block J — status immunity — DONE (commit 510311e)
+The block's only new logic. Data-driven: `InitStatsFromRow` grants `Immunity.Status` (loose tag) to
+any unit whose row sets `bStatusImmune`. **Confuse blocked declaratively:** GE_Provoke gained a
+**"Require Tags to Apply/Continue This Effect"** component (UE 5.6's Target Tag Requirements) with
+Application Tag Requirements → Must Not Have `Immunity.Status`. **Intimidate blocked in C++:** the
+displacement loop skips immune units (they still TAKE collision damage from mobs flung into them —
+damage ≠ status). Verified: boss logs "resisted Confuse" / "status-immune — not displaced"; Narrator
+still confusable/flingable.
+- **Lesson (cost us a debug loop):** `GA_Provoke`'s old log claimed "is now Confused" unconditionally —
+  `SpecHandle.IsValid()` only means "spec was built". Fixed to check the applied handle's
+  `WasSuccessfullyApplied()` (false when an application tag requirement blocks). **Trust application
+  results, not spec validity.** Also: `showdebug abilitysystem` misreports tags on AI-possessed pawns —
+  use the GameplayDebugger (`'`) or a UE_LOG for tag ground truth.
+- **UE 5.6 note:** GameplayEffects are component-based; tag gating lives in the "Require Tags to
+  Apply/Continue This Effect" component ("Must Not Have Tags" = the old Ignore Tags).
+
+## Playtest findings → next-session decisions (locked with user)
+- **BG3 comparison:** our *resolution* layer (d20 + mod vs AC/DC, advantage, DEX initiative, 5e
+  modifier formula) is already BG3-faithful; our *damage* layer is not (flat shared 25/50, no stats)
+  → fixed by the SetByCaller damage system above.
+- **Dice-roll visuals (split, BG3-style):** combat rolls NEVER get a cinematic dice moment — compact
+  feedback only (Block K: floating "Miss!/Resisted!" + damage numbers; roll detail `d20: 17+3 vs AC 14`
+  goes to the battle log). The cinematic 3D dice screen is reserved for **narrative action checks**,
+  which don't exist yet → Phase 2. Don't build the stage before there's an actor.
 
 ### Block J design — locked with user (only ONE new logic piece)
 The only genuinely NEW *logic* in J is **status immunity**: the tag + boss grants it + Confuse's
@@ -599,3 +633,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 36 | **HUD follow-up arc** (3 tasks): command-menu ally-turn-gating + active-unit bind (catch-up fix for missed-first-broadcast); floating FFT HP bars (`UHealthBarWidget` + `UWidgetComponent` on ABaseCharacter, allegiance colour, deleted fixed HUD bars); enemy-turn forecast (shared `BuildForecast`/`GetActiveForecast`, `AttackTarget`→forecast beat→`ExecuteStrike`, widget rewired to one unified read, attacker-left). | ✓ |
 | 37 | **Block I2 — data-driven stats**: `FCRPGCharacterRow : FTableRowBase` schema + `DT_Characters` DataTable (3 rows in the editor grid, CSV deferred); `FDataTableRowHandle` on ABaseCharacter → `InitStatsFromRow()` sets AttributeSet base values (`Init*` accessors) + MoveRange from the row, legacy stat-init GE as fallback; `AEnemyCharacter` HeavyStrikeChance from the row. `bStatusImmune` staged in data for Block J. Reordered J behind I2 so immunity is data-driven from the start. | ✓ |
 | 38 | **Walk animation + camera follow** (short pass on top of I2): per-AnimBP `Speed` var + Walk state inside the existing Combat State Machine (InPlace clips, Speed>10/<10, Orient-to-Movement, Max Walk Speed 175/175/250 for Nameless/Boss/Enemy); camera trails the active combatant while walking via `SetFollowTarget` + a velocity-gated Tick re-aim that reuses FocusOn's easing. | ✓ |
+| 39 | **Block J — status immunity** (the block's only new logic): `Immunity.Status` tag granted data-driven from `bStatusImmune`; GE_Provoke "Require Tags to Apply/Continue" component blocks Confuse; Intimidate displacement skips immune units (collision damage still lands). Fixed GA_Provoke's lying success log (`WasSuccessfullyApplied`). Also: Aug 15 deadline + week plan locked; blocks M (env art) / N (onboarding) added; STORY.md skeleton created (local-only); playtest decisions recorded (SetByCaller damage + honest Hit% next, dice visuals split combat-compact/K vs cinematic/Phase-2). | ✓ |
