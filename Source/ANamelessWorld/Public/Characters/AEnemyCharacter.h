@@ -27,7 +27,8 @@ public:
 
     // Called from the Level Blueprint to wire up combat references.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
-    void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget);
+    virtual void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget) 
+    override;
 
     UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "ANW|Combat")
     UTurnManager* TurnManager;

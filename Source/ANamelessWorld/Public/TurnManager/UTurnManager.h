@@ -143,6 +143,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Turn Manager")
     void AddCombatant(ABaseCharacter* NewCombatant);
 
+    // Auto-register every ABaseCharacter in the world + wire each one's combat.
+    // Replaces per-enemy Level BP wiring. Call once, before StartCombat.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat", meta = (WorldContext = "WorldContextObject"))
+    void RegisterWorldCombatants(UObject* WorldContextObject);
+    
     /**
      * Begin the fight. Call this once all combatants have been added.
      * Internally: rolls initiative for everyone, sorts the Combatants array,

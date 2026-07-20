@@ -74,6 +74,10 @@ ABaseCharacter::ABaseCharacter()
     HealthBarWidget->SetDrawSize(FVector2D(150.f, 18.f));     // pixel size of the bar
     HealthBarWidget->SetRelativeLocation(FVector(0.f, 0.f, 120.f)); // above the head (capsule half-height is 88)
     HealthBarWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision); // never blocks clicks/traces    
+    // The camera boom must never collide with characters. If a pivot lands on a
+    // unit (e.g. the establishing shot's battlefield center), the spring arm would
+    // otherwise yank the camera tight against them. Walls still block the boom.
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
     // ── Inventory ────────────────────────────────────────────────────────────
     // Session 3 complete — UInventoryComponent now exists, enabling this.

@@ -6,6 +6,7 @@
 #include "TurnManager/UTurnManager.h"
 #include "Characters/ABaseCharacter.h"
 #include "AbilitySystemComponent.h"  
+#include "Kismet/GameplayStatics.h"
 // Full include here (not just forward declaration) because in this file
 // we actually CALL functions on ABaseCharacter — GetDexterity(), IsAlive(), etc.
 // The .h only stored a pointer, so a forward declaration was enough there.
@@ -36,6 +37,29 @@ void UTurnManager::AddCombatant(ABaseCharacter* NewCombatant)
 
     UE_LOG(LogTemp, Log, TEXT("UTurnManager::AddCombatant — %s joined the fight. Roster size: %d"),
            *NewCombatant->GetName(), Combatants.Num());
+}
+
+void UTurnManager::RegisterWorldCombatants(UObject* WorldContextObject)
+{
+    TArray<AActor*> Found;
+    UGameplayStatics::GetAllActorsOfClass(
+        WorldContextObject, ABaseCharacter::StaticClass(), Found);
+
+    // The player is every enemy AI's target — find it first.
+    ABaseCharacter* PlayerTarget = nullptr;
+    for (AActor* A : Found)
+        if (ABaseCharacter* C = Cast<ABaseCharacter>(A))
+            if (C->IsPlayerCharacter()) { PlayerTarget = C; break; }
+
+    // Add everyone to the roster, then let each wire its own combat (polymorphic:
+    // base no-ops, enemies subscribe their AI). Initiative sorting happens later,
+    // so gather order doesn't matter.
+    for (AActor* A : Found)
+        if (ABaseCharacter* C = Cast<ABaseCharacter>(A))
+        {
+            AddCombatant(C);
+            C->SetupCombat(this, PlayerTarget);
+        }
 }
 
 void UTurnManager::StartCombat()

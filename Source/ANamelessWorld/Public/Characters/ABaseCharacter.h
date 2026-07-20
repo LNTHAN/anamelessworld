@@ -43,6 +43,7 @@ class UAbilitySystemComponent;
 class UGameplayEffect;    // Used for default attribute initialisation effect
 class UGameplayAbility;   // Used for the DefaultAbilities array
 class UWidgetComponent;
+class UTurnManager;
 
 
 // ── Class Declaration ─────────────────────────────────────────────────────────
@@ -63,6 +64,10 @@ public:
     // Creates all components via CreateDefaultSubobject.
     // Sets up the ASC replication mode.
     // Body is in ABaseCharacter.cpp.
+
+    // How this character joins combat. Base does nothing (the player needs no AI
+    // setup); AEnemyCharacter overrides it to subscribe its AI to the TurnManager.
+    virtual void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget) {}
 
 
     // ── GAS Interface Requirement ────────────────────────────────────────────
@@ -254,7 +259,7 @@ protected:
     // Which row of DT_Characters holds this character's balance numbers. Set per
     // character Blueprint (table = DT_Characters, row = Nameless / Narrator / etc.).
     // The RowType meta filters the editor picker to our struct only.
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Data",
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ANW|Data",
         meta = (RowType = "/Script/ANamelessWorld.CRPGCharacterRow"))
     FDataTableRowHandle CharacterRowHandle;
 

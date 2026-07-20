@@ -69,6 +69,7 @@ Swap the greybox floor / walls / shelves for **sourced** meshes + materials (Syn
 
 ### Block N — Onboarding
 Teach the manipulation loop. **Last** — only once mechanics are frozen.
+- **Scripted turn order (tutorial override):** the Ch1 tutorial battle needs a *fixed* order — Nameless → the 3 mobs (nearest-to-Nameless first) → boss last — so onboarding can walk Movement → Confuse → Intimidate as a controlled beat. Build as an optional "scripted order" mode on `UTurnManager` that bypasses the DEX+d20 initiative roll for this encounter only; **initiative stays the default for all real battles.** Layout is already pre-positioned for this (2 mobs mid-field near Nameless for Intimidate/Confuse teaching, 1 mob by the boss).
 
 ---
 

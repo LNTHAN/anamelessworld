@@ -19,7 +19,7 @@ ATacticalCameraPawn::ATacticalCameraPawn()
     SpringArm->SetupAttachment(Pivot);
     SpringArm->TargetArmLength = TargetZoom;
     SpringArm->SetRelativeRotation(FRotator(-50.f, 0.f, 0.f)); // pitch down 50°
-    SpringArm->bDoCollisionTest = true;   // auto pull-in past walls
+    SpringArm->bDoCollisionTest = false;   // auto pull-in past walls
     SpringArm->bEnableCameraLag = true;   // smooth follow when panning
     SpringArm->CameraLagSpeed = 10.f;
     // We drive the boom's rotation ourselves — don't inherit any control rotation.
