@@ -59,7 +59,20 @@ Define `USTRUCT` row types; build **DataTables** (Characters, Abilities) importe
 Tactical enemy AI (move-to-target, confused targeting, boss pursuit). **Boss = fast/ranged, immune to status** — the unkitable clock. Encounter layout, mob count, and the balance pass → tight, winnable, fun.
 
 ### Block K — Clarity & feedback (the "fun" polish)
-Movement-range & ability-range/AoE indicators, threat telegraphs, status icons, hit/miss/damage feedback, dice-roll visualization, ability VFX, confusion + bookshelf-crash visuals.
+Make the board *readable* so the manipulation puzzle can be played on purpose. §9 colour language: **cyan = movement, red = attack/threat** (radius-based → circular zones, not tiles).
+
+**Range/AoE indicators (each ability now HAS a range that's currently invisible):**
+- **Movement range** — cyan zone around the active unit, shown on the player's turn (drive size from `MoveRange`; the Block-G `M_MoveRange` decal is the starting point).
+- **Confuse cast range** — ring around Nameless during Targeting + highlight valid (in-range, living-enemy) targets. Currently `ConfuseCastRange` (600) is enforced but you click blind.
+- **Intimidate AoE** + **Interact/shelf blast zone** — show the affected area before committing.
+
+**Enemy-intent telegraphs (the highest-leverage legibility work — a manipulation game is only fun if you can see what you're manipulating). Two tiers:**
+- **Tier 1 (cheap, THIS block):** during the player's turn, a curved **threat line** from each enemy to its intended target (who it will attack — the exact datum Confuse manipulates) + that enemy's move/attack range on hover. Event-driven refresh (recompute after the player moves/confuses, NOT per-frame). Prereq already noted for Block J: keep each enemy's current-target decision cheap to query outside its turn.
+- **Tier 2 (expensive, deferred — Phase 2):** live FE3H-style danger zones that recompute as you drag a hypothetical move. Don't let its cost scare off Tier 1.
+
+**Combat feedback:** floating combat text — "Miss!" / "Resisted!" / **"Immune"** (Confuse on the boss) / damage numbers; roll detail (`d20: 17+3 vs AC 14`) to the battle log. Forecast panel shows Immune instead of an inflict %. **Dice-roll visuals stay COMBAT-COMPACT** (no cinematic 3D dice — that's reserved for narrative action checks, which don't exist until Phase 2).
+
+**Juice:** status icons over units, ability VFX, the confusion + bookshelf-crash visuals, more screenshake. Also the deferred Intimidate polish (smooth panic-slide + fall-over, replacing the teleport) and the toppled-shelf linger/fade.
 
 ### Block L — Cinematic chapter loop
 Chapter card + Battle Commenced (done). Ending slides → World Finished → Chapter 2 teaser, reusing the configurable cutscene widget.
@@ -80,6 +93,16 @@ Teach the manipulation loop. **Last** — only once mechanics are frozen.
 - Equipment (including MoveRange growth — see Block H2)
 - Branching dialogue + choices
 - Multiple battles per chapter
+
+### Phase 2 — data-driven ability system (designed 2026-07-16, deliberately deferred)
+Composition-style ability data, so new skills are authored as rows instead of code:
+- **`DT_AbilityEffect`** — one row per *effect primitive* (damage, status application, displacement…), holding its numbers.
+- **`DT_Ability`** — one row per skill, referencing one or more AbilityEffect IDs → new skills = new combinations, no new C++.
+- **Ability-ID column on `DT_Characters`** — which kit a unit carries.
+- A resolution layer reading these, replacing per-ability hardcoded numbers; unifies ALL damage sources (attacks, Intimidate collision, shelf crush) into one tunable place.
+
+**Why deferred (not rejected):** (a) **GAS already provides the effect layer** — GameplayEffects do application, duration, stacking, immunity gating; a DT_AbilityEffect table partly re-implements it. What GEs actually lacked was *data-driven numbers*, and **SetByCaller + DT_Characters columns already delivers that** at a fraction of the cost. (b) **Zero new abilities ship before Aug 15** — the Ch1 kit is frozen (Confuse/Intimidate/Interact; Embolden is Ch2), so a system whose payoff is "new abilities are cheap" returns *after* the deadline while its cost lands on the critical path. Revisit when actually authoring abilities.
+**Rejected sub-idea:** making the rigged shelf an `ABaseCharacter` to fit the schema — it isn't a combatant and would inherit turn order, AI, action economy and an HP bar it never uses. Give env objects their own rows/floats instead; don't let the schema dictate what things *are*.
 
 ---
 

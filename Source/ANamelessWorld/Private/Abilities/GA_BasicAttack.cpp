@@ -211,13 +211,19 @@ void UGA_BasicAttack::ActivateAbility(
                 ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
                     DamageEffectClass, GetAbilityLevel(), ContextHandle);
 
-            if (SpecHandle.IsValid())
+                        if (SpecHandle.IsValid())
             {
+                const float FinalDamage = UCRPGCombatLibrary::CalculateAttackDamage(
+                    Cast<ABaseCharacter>(GetAvatarActorFromActorInfo()), bIsHeavyAttack);
+
+                // Negative because the GE's Health modifier ADDs this value.
+                SpecHandle.Data->SetSetByCallerMagnitude(
+                    FGameplayTag::RequestGameplayTag(FName("Data.Damage")), -FinalDamage);
+
                 TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
-                UE_LOG(LogTemp, Log,
-                    TEXT("GA_BasicAttack: Hit! %s took damage."),
-                    *TargetCharacter->GetName());
+                UE_LOG(LogTemp, Log, TEXT("GA_BasicAttack: Hit! %s took %.0f damage."),
+                    *TargetCharacter->GetName(), FinalDamage);
             }
         }
     }

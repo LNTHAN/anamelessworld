@@ -126,6 +126,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
     float GetDexterity() const;
 
+    UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
+    float GetStrength() const;
+
     // Returns current Health — used by HUD to fill the health bar.
     UFUNCTION(BlueprintCallable, Category = "ANW|Attributes")
     float GetHealth() const;
@@ -169,6 +172,15 @@ public:
     // ~500 ≈ 5 metres. Both the player and enemies read this.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Movement")
     float MoveRange = 500.f;
+
+    // Base damage for this character's normal attack / heavy strike, read from
+    // DT_Characters at spawn. The attacker's STR modifier is added on top at cast
+    // time (see UGA_BasicAttack) — these are the base BEFORE modifiers.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ANW|Combat")
+    float AttackDamage = 10.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ANW|Combat")
+    float HeavyDamage = 20.f;
 
     // Instantly turn to face a target (horizontal only). Called before an
     // attack/cast so characters look at who they're acting on.

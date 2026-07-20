@@ -50,6 +50,15 @@ struct ANAMELESSWORLD_API FCRPGCharacterRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tactical")
     float MoveRange = 500.f;
 
+    // Base damage for this unit's normal attack, BEFORE the STR modifier is
+    // added at cast time. The old flat GE_DamageInstant value was 25 for everyone.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tactical")
+    float AttackDamage = 10.f;
+
+    // Base damage for this unit's heavy strike, same rule. Old flat value: 50.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tactical")
+    float HeavyDamage = 20.f;
+
     // 0–100. Enemy AI: chance per turn to use Heavy Strike over Basic. Player: ignored.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tactical")
     int32 HeavyStrikeChance = 0;

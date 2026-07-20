@@ -3,6 +3,9 @@
 //          All functions are static — no instance needed, call directly from anywhere.
 
 #include "Utilities/UCRPGCombatLibrary.h"
+#include "Characters/ABaseCharacter.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayTagContainer.h"
 
 
 int32 UCRPGCombatLibrary::RollD20()
@@ -52,4 +55,39 @@ int32 UCRPGCombatLibrary::CalculateAC(float DexScore)
     // Armor Class: the number an attacker must meet or beat to land a hit.
     // Base 10 + DEX modifier. Equipment bonuses added on top later.
     return 10 + GetModifier(DexScore);
+}
+
+float UCRPGCombatLibrary::CalculateAttackDamage(const ABaseCharacter* Attacker, bool bHeavy)
+{
+    if (!Attacker) return 0.f;
+    const float Base = bHeavy ? Attacker->HeavyDamage : Attacker->AttackDamage;
+    return FMath::Max(1.f, Base + GetModifier(Attacker->GetStrength()));
+}
+
+int32 UCRPGCombatLibrary::CalculateHitChance(const ABaseCharacter* Attacker, const ABaseCharacter* Target)
+{
+    if (!Attacker || !Target) return 0;
+
+    const int32 STRMod   = GetModifier(Attacker->GetStrength());
+    const int32 TargetAC = CalculateAC(Target->GetDexterity());
+
+    // Hit needs d20 + STRMod >= AC, i.e. d20 >= AC - STRMod.
+    const int32 Need = TargetAC - STRMod;
+
+    // Clamped to 5%/95% — the 5e convention that a nat 1 always misses and a
+    // nat 20 always hits.
+    float P = FMath::Clamp((21.f - Need) / 20.f, 0.05f, 0.95f);
+
+    // Mirrors GA_BasicAttack: Advantage = 2d20 keep-highest, Disadvantage =
+    // keep-lowest, and having both cancels out.
+    const UAbilitySystemComponent* ASC = Attacker->GetAbilitySystemComponent();
+    const bool bAdv = ASC && ASC->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Advantage")));
+    const bool bDis = ASC && ASC->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Confused")));
+
+    if (bAdv && !bDis)      P = 1.f - (1.f - P) * (1.f - P);
+    else if (bDis && !bAdv) P = P * P;
+
+    return FMath::RoundToInt(P * 100.f);
 }

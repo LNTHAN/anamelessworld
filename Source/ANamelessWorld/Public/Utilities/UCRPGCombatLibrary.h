@@ -9,6 +9,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "UCRPGCombatLibrary.generated.h"
 
+class ABaseCharacter;
+
 UCLASS()
 class ANAMELESSWORLD_API UCRPGCombatLibrary : public UBlueprintFunctionLibrary
 {
@@ -47,4 +49,14 @@ public:
     // This is the number an attacker must meet or beat to land a hit.
     UFUNCTION(BlueprintCallable, Category = "ANW|Dice")
     static int32 CalculateAC(float DexScore);
+
+    // Damage this attacker deals with a normal/heavy attack: DT_Characters base +
+    // STR modifier, floored at 1. SINGLE SOURCE OF TRUTH — the ability applies this
+    // and the forecast displays it, so the preview can't drift from what lands.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    static float CalculateAttackDamage(const ABaseCharacter* Attacker, bool bHeavy);
+
+    // Percent chance (0-100) that Attacker's d20 + STR beats Target's AC.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    static int32 CalculateHitChance(const ABaseCharacter* Attacker, const ABaseCharacter* Target);
 };

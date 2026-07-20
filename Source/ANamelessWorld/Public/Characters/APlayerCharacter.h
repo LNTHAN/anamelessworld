@@ -77,6 +77,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Combat")
     float InteractRange = 200.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ANW|Combat")
+    float ConfuseCastRange = 600.f;
+
     // Interact command: rig the given object. Gated like every other action
     // (PlayerTurn + Action stock) plus a range check. Returns true only if it
     // actually armed (spent the Action) — the controller uses that to decide

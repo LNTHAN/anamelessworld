@@ -244,6 +244,8 @@ bool ABaseCharacter::InitStatsFromRow()
 
     // Non-attribute tunable that also lives in the row.
     MoveRange = Row->MoveRange;
+    AttackDamage = Row->AttackDamage;
+    HeavyDamage  = Row->HeavyDamage;
 
     // Data-driven status immunity: a unit whose row flags bStatusImmune owns the
     // Immunity.Status tag permanently. Confuse's GameplayEffect will refuse to apply
@@ -366,6 +368,11 @@ float ABaseCharacter::GetDexterity() const
     // ATTRIBUTE_ACCESSORS generated GetDexterity() on UCRPGAttributeSet in Session 1.
     // We call it here so UTurnManager never needs to touch Attributes directly.
     return Attributes->GetDexterity();
+}
+
+float ABaseCharacter::GetStrength() const
+{
+    return Attributes ? Attributes->GetStrength() : 0.f;
 }
 
 void ABaseCharacter::SetIsAttacking(bool bAttacking)

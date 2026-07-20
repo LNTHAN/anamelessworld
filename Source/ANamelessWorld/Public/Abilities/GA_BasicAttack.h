@@ -62,6 +62,11 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Ability")
     TSubclassOf<UGameplayEffect> DamageEffectClass;
 
+    // True on BP_GA_HeavyStrike, false on BP_GA_BasicAttack. Selects which base
+    // damage column to read from the attacker's stats row.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Ability")
+    bool bIsHeavyAttack = false;
+
     // ── Attack animation duration ──────────────────────────────────────────
     // How long to wait before resetting bIsAttacking and ending the ability.
     // Set this to roughly match your attack animation clip length.

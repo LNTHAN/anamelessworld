@@ -7,6 +7,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/ATacticalCameraPawn.h"
 #include "Interactables/AInteractableActor.h"
+#include "Utilities/UCRPGCombatLibrary.h"
+
 
 void ATacticalPlayerController::BeginPlay()
 {
@@ -106,6 +108,18 @@ void ATacticalPlayerController::OnMoveClicked()
         {
             if (ABaseCharacter* Target = Cast<ABaseCharacter>(Hit.GetActor()))
             {
+                // Cast-range gate: too far → don't stage, stay in Targeting so the
+                // player can move closer or pick a nearer target. No Action spent.
+                const float Dist = FVector::Dist(
+                    ControlledCharacter->GetActorLocation(), Target->GetActorLocation());
+                if (Dist > ControlledCharacter->ConfuseCastRange)
+                {
+                    UE_LOG(LogTemp, Log,
+                        TEXT("Confuse: %s is %.0f away (> %.0f cast range) — move closer."),
+                        *Target->GetName(), Dist, ControlledCharacter->ConfuseCastRange);
+                    return;
+                }
+
                 PendingTarget = Target;
                 TargetingPhase = ETargetingPhase::Confirming;
             }
@@ -260,17 +274,18 @@ FAbilityForecast ATacticalPlayerController::BuildForecast(
     {
         F.bValid       = true;
         F.AbilityName  = FText::FromString(TEXT("Strike"));
-        F.HitChance    = 100;    // no to-hit roll today; TODO(J) AC/save
+        F.HitChance = UCRPGCombatLibrary::CalculateHitChance(Attacker, Target);        
         F.bDealsDamage = true;
-        F.Damage       = 25;     // matches GE_DamageInstant; TODO(I2) read from data
-    }
+        F.Damage    = FMath::RoundToInt(
+            UCRPGCombatLibrary::CalculateAttackDamage(Attacker, /*bHeavy=*/false));    }
     else if (AbilityTag == FName("Ability.Attack.Heavy"))
     {
         F.bValid       = true;
         F.AbilityName  = FText::FromString(TEXT("Heavy Strike"));
-        F.HitChance    = 100;
+        F.HitChance    = UCRPGCombatLibrary::CalculateHitChance(Attacker, Target);
         F.bDealsDamage = true;
-        F.Damage       = 50;     // matches GE_HeavyStrike; TODO(I2) read from data
+        F.Damage       = FMath::RoundToInt(
+            UCRPGCombatLibrary::CalculateAttackDamage(Attacker, /*bHeavy=*/true));
     }
     // TODO: Intimidate (self-AoE) gets a highlight+summary, not this arrow.
 
