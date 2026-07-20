@@ -1,22 +1,26 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block J continues — 3-mob encounter, then damage system, then balance
-Status immunity is DONE + committed (510311e). Remaining J work, in this locked order:
-1. **3-mob setup + layout** — drop 2 more `BP_EnemyCharacter` in TestLevel + wire each into
-   `SetupCombat`/initiative in the Level BP (TurnManager already handles any roster). Layout: rigged
-   shelves as bait-lanes on the boss's pursuit path, mobs placed near the boss (so a confused mob's
-   "nearest" can BE the boss), kiting room + chokepoints.
-2. **Damage system + honest forecast** (~1 session) — damage = per-attack BASE (new `AttackDamage`/
-   `HeavyDamage` columns in DT_Characters) + attacker's STR modifier, injected via **SetByCaller**
-   (ability computes the number at cast time, one damage GE serves everyone; retire the flat
-   GE_DamageInstant −25 / GE_HeavyStrike −50 numbers). Forecast `BuildForecast` Hit% is hardcoded →
-   compute for real: **P(hit) = (21 − (AC − attackerMod)) / 20**, clamp [5%,95%]; Advantage
-   `1−(1−p)²`, Disadvantage `p²`. NOTE: **Confuse's Inflict 100% is truthful BY DESIGN** (§6 — the
-   gamble is the confused unit's Disadvantage attack, not the application). Keep it.
-3. **Balance pass** — only after mobs exist + numbers are honest. MoveRange already fixed in the
-   table (Nameless 500 / boss 600 — §6 rule satisfied).
-Sequencing rationale: mobs first (balance must see the real encounter), honest numbers second
-(don't tune against lies), tuning last.
+## ▶ NEXT SESSION: Block J — the BALANCE PASS (last piece of J)
+Immunity, 3-mob auto-register, and the honest damage/forecast system are all DONE + committed
+(510311e / 31cd5fd / 02d7098). Only tuning remains — and now the numbers are honest, so it can be
+done for real. All levers live in `DT_Characters` cells + a couple of EditAnywhere floats:
+- **Concrete findings to tune** (from playtest):
+  - **Mob walk-in pacing is too slow** — turn 1 logged all enemies "ended movement out of range",
+    distances 1812/1985/640 vs MoveRange 300(Person)/400(Narrator)/600(Boss). Far mobs need 4–6 turns
+    just to arrive → dead time. Fix by **tightening the layout** (mobs start closer) and/or **raising
+    mob MoveRange** (300 is very low).
+  - **`ConfuseCastRange` = 600** (on APlayerCharacter) — tune; lower = more positional pressure.
+  - **Attack/HeavyDamage columns** were set intentionally LOW (defaults 10/20) pending this pass —
+    set the real per-unit spread (mobs soft, boss hard = the clock). STR modifier adds on top.
+  - Balance target (DESIGN §6): boss ~150 HP, a Heavy ~50 → ~3 indirect hits; boss ~25–50/turn vs
+    Nameless 100 → ~2–4 turn budget. Make "3 hits in 3–4 turns" achievable-but-demanding; all three
+    tools (Confuse / Intimidate / shelf) should feel needed.
+- **Known flat-damage gap (fold into the pass):** `GA_Intimidate` collision damage + the rigged
+  shelf crush still apply the OLD flat `GE_DamageInstant`/`GE_HeavyStrike` (attacks now use SetByCaller
+  `GE_Damage`). Decide whether env damage should also be data-driven (cheap — same injection point) or
+  stays flat. Do NOT delete GE_DamageInstant/HeavyStrike — those two call sites still use them.
+- After J's balance → **Block L** (win/lose screens): the `OnCombatEnded_Event` hook already exists in
+  the Level BP (currently Print "Player Won!"/"Game Over..."), see LEVELBP.md. That's the Wk2 milestone.
 
 ## Block J — status immunity — DONE (commit 510311e)
 The block's only new logic. Data-driven: `InitStatsFromRow` grants `Immunity.Status` (loose tag) to
@@ -634,3 +638,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 37 | **Block I2 — data-driven stats**: `FCRPGCharacterRow : FTableRowBase` schema + `DT_Characters` DataTable (3 rows in the editor grid, CSV deferred); `FDataTableRowHandle` on ABaseCharacter → `InitStatsFromRow()` sets AttributeSet base values (`Init*` accessors) + MoveRange from the row, legacy stat-init GE as fallback; `AEnemyCharacter` HeavyStrikeChance from the row. `bStatusImmune` staged in data for Block J. Reordered J behind I2 so immunity is data-driven from the start. | ✓ |
 | 38 | **Walk animation + camera follow** (short pass on top of I2): per-AnimBP `Speed` var + Walk state inside the existing Combat State Machine (InPlace clips, Speed>10/<10, Orient-to-Movement, Max Walk Speed 175/175/250 for Nameless/Boss/Enemy); camera trails the active combatant while walking via `SetFollowTarget` + a velocity-gated Tick re-aim that reuses FocusOn's easing. | ✓ |
 | 39 | **Block J — status immunity** (the block's only new logic): `Immunity.Status` tag granted data-driven from `bStatusImmune`; GE_Provoke "Require Tags to Apply/Continue" component blocks Confuse; Intimidate displacement skips immune units (collision damage still lands). Fixed GA_Provoke's lying success log (`WasSuccessfullyApplied`). Also: Aug 15 deadline + week plan locked; blocks M (env art) / N (onboarding) added; STORY.md skeleton created (local-only); playtest decisions recorded (SetByCaller damage + honest Hit% next, dice visuals split combat-compact/K vs cinematic/Phase-2). | ✓ |
+| 40 | **Block J — encounter + honest numbers** (long session): `UTurnManager::RegisterWorldCombatants` auto-gathers every ABaseCharacter (one Level BP node replaces 8; `SetupCombat` now a base virtual hook); 3-mob encounter (Person1/Person2 rows, EditAnywhere row handle); tactical camera spring-arm collision OFF (fixed unit-jams-establishing-shot). Data-driven damage: DT base + STR via SetByCaller into new GE_Damage; `CalculateAttackDamage`/`CalculateHitChance` shared by ability + forecast (no drift); Confuse gains `ConfuseCastRange` 600. Wrote **LEVELBP.md** (Level BP text mirror). Recorded Phase-2 data-driven ability system (deferred w/ rationale) + enriched Block K (range indicators, tiered enemy-intent). | ✓ |
