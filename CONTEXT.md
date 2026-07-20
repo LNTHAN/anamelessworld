@@ -3,7 +3,7 @@
 ## ▶ NEXT SESSION: Block K — UI / clarity polish (VISUAL-FIRST reprioritization, 2026-07-21)
 **Plan changed 2026-07-21:** grader weights visuals over balance, so Block J's balance pass + H2 are
 deferred to **Block O (may be cut)**; effort shifts to K (UI) then M (art). Block J's *systems* are done.
-New order: **K → M → L → N → (O if time)**. See ROADMAP delivery schedule + [[deadline-coding-final]].
+New order: **K → L → M → N → (O if time)** (L before M — secure the complete-loop signal before the art rabbit hole). See ROADMAP delivery schedule + [[deadline-coding-final]].
 Today ≈ Jul 21, ~25 days to Aug 15 — on track, buffer real-but-tight, M-art is the swing risk.
 
 **Next session = Block K (start the grade-visible legibility + feedback):** highest-value items —

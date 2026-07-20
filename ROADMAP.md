@@ -35,17 +35,17 @@ Confuse range) are DONE — only its balance pass is deferred.
   (a) a 5-min mob-pacing fix (bump mob MoveRange / move mobs closer — pure demoability, not balance);
   (b) **L-minimal**: wire the win/lose screens now (the `OnCombatEnded_Event` hook already exists) so a
   *complete loop always exists* regardless of how M goes.
-- **Jul 28–Aug 3 — Block M (environment art / de-greybox):** sourced meshes+materials (Synty/Fab; source,
-  don't create). **TIMEBOXED — the one real rabbit hole.**
-- **Aug 4–8 — Block L (full cinematic loop):** endings, "World N … Finished", Chapter 2 teaser (the polish
-  on top of L-minimal).
+- **Jul 28–Aug 3 — Block L (full cinematic loop):** endings, "World N … Finished", Chapter 2 teaser (polish
+  on top of L-minimal). Cheap — the `OnCombatEnded_Event` hook already exists.
+- **Aug 4–8 — Block M (environment art / de-greybox):** sourced meshes+materials (Synty/Fab; source,
+  don't create). **TIMEBOXED — the one real rabbit hole; deliberately AFTER L so it can't swallow the ending.**
 - **Aug 9–12 — Block N (onboarding):** teach the manipulation loop; scripted turn order override.
 - **Aug 13–15 — buffer:** playtest / bug-fix, no new features.
 - **Block O (deferred): balance pass + H2 progression** — only if buffer allows; else cut (grader doesn't
   weight balance). See CONTEXT for the concrete balance targets already captured.
 - **Cut order if slipping:** Block O (already deferred) → full M art (keep a light version) → Tier-2 danger overlays.
-- **⚠ M-before-L risk (accepted, mitigated):** L is the cheapest completeness signal; if M overruns it must
-  NOT swallow L. Mitigation = L-minimal wiring done early (in the K week), full L after M.
+- **Order note:** L precedes M (the complete-loop signal is secured before the art rabbit hole); L-minimal is
+  still wired early in the K week as insurance.
 
 ## Phase 1 — World 1 / Chapter 1 (to near-final quality)
 
