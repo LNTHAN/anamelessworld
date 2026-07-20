@@ -1,9 +1,23 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block J — the BALANCE PASS (last piece of J)
-Immunity, 3-mob auto-register, and the honest damage/forecast system are all DONE + committed
-(510311e / 31cd5fd / 02d7098). Only tuning remains — and now the numbers are honest, so it can be
-done for real. All levers live in `DT_Characters` cells + a couple of EditAnywhere floats:
+## ▶ NEXT SESSION: Block K — UI / clarity polish (VISUAL-FIRST reprioritization, 2026-07-21)
+**Plan changed 2026-07-21:** grader weights visuals over balance, so Block J's balance pass + H2 are
+deferred to **Block O (may be cut)**; effort shifts to K (UI) then M (art). Block J's *systems* are done.
+New order: **K → M → L → N → (O if time)**. See ROADMAP delivery schedule + [[deadline-coding-final]].
+Today ≈ Jul 21, ~25 days to Aug 15 — on track, buffer real-but-tight, M-art is the swing risk.
+
+**Next session = Block K (start the grade-visible legibility + feedback):** highest-value items —
+floating combat text (damage numbers / "Miss!" / "Resisted!" / **"Immune"**), the **Confuse cast-range
+ring + valid-target highlight** (600 range enforced but currently clicking blind), enemy-intent
+threat-lines, movement-range zone, status icons. Full spec in ROADMAP Block K. **Plus two small tasks
+this week:** (a) **5-min mob-pacing fix** (bump mob MoveRange from 300 / move mobs closer — pure
+demoability, NOT the deferred balance pass); (b) **L-minimal** — wire the win/lose screens now (the
+`OnCombatEnded_Event` hook exists in the Level BP, see LEVELBP.md) so a complete loop always exists
+regardless of how the M art block goes.
+
+## Block J — BALANCE PASS — DEFERRED to Block O (2026-07-21)
+Was "next"; now deferred (grader doesn't weight balance). Concrete targets kept here for when Block O runs.
+All levers live in `DT_Characters` cells + a couple of EditAnywhere floats:
 - **Concrete findings to tune** (from playtest):
   - **Mob walk-in pacing is too slow** — turn 1 logged all enemies "ended movement out of range",
     distances 1812/1985/640 vs MoveRange 300(Person)/400(Narrator)/600(Boss). Far mobs need 4–6 turns

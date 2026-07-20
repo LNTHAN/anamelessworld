@@ -24,14 +24,28 @@ Menu → Intro Slides → Chapter Card → Pre-battle Dialogue → Battle Commen
 
 ---
 
-## Delivery schedule — LOCKED to Aug 15 2026 (set 2026-07-16)
-Coding-school final; passable demonstrable build due **Aug 15 2026**. Critical path ≈ 11–13 sessions, so there is margin — the real risk is scope creep in polish (K) and art (M), not time.
-- **Wk1 (Jul 16–22) — Block J:** status immunity + 3 mobs + layout + balance → winnable boss fight.
-- **Wk2 (Jul 23–29) — Block L finish:** win/lose + "World Finished" + endings + Ch2 teaser → **complete playable loop (passable-build milestone).**
-- **Wk3 (Jul 30–Aug 5):** Block K legibility (enemy-intent indicators + damage numbers) + start Block N onboarding.
-- **Wk4 (Aug 6–12):** finish onboarding + **light** Block M art (floor material + one real shelf) + H2 if time.
-- **Aug 13–15:** buffer — playtest / balance / bug-fix, no new features.
-- **Cut order if slipping:** H2 → full M art (keep light) → Tier-2 danger overlays.
+## Delivery schedule — LOCKED to Aug 15 2026 (reprioritized 2026-07-21, VISUAL-FIRST)
+Coding-school final due **Aug 15 2026**. **Reprioritization (2026-07-21):** the grader weights *visual
+polish + a complete, finished-looking demo* over combat balance / systems depth. So **balance (rest of
+Block J) and H2 progression are deferred to a new Block O** (may be cut), and effort shifts to **K (UI)
+and M (environment art)**. Block J's *systems* (immunity, 3-mob encounter, data-driven damage/forecast,
+Confuse range) are DONE — only its balance pass is deferred.
+- **Jul 21–27 — Block K (UI/clarity polish):** range indicators (Confuse ring + valid targets, move zone),
+  enemy-intent threat-lines, floating damage/Miss/Immune text, status icons. **PLUS two small tasks here:**
+  (a) a 5-min mob-pacing fix (bump mob MoveRange / move mobs closer — pure demoability, not balance);
+  (b) **L-minimal**: wire the win/lose screens now (the `OnCombatEnded_Event` hook already exists) so a
+  *complete loop always exists* regardless of how M goes.
+- **Jul 28–Aug 3 — Block M (environment art / de-greybox):** sourced meshes+materials (Synty/Fab; source,
+  don't create). **TIMEBOXED — the one real rabbit hole.**
+- **Aug 4–8 — Block L (full cinematic loop):** endings, "World N … Finished", Chapter 2 teaser (the polish
+  on top of L-minimal).
+- **Aug 9–12 — Block N (onboarding):** teach the manipulation loop; scripted turn order override.
+- **Aug 13–15 — buffer:** playtest / bug-fix, no new features.
+- **Block O (deferred): balance pass + H2 progression** — only if buffer allows; else cut (grader doesn't
+  weight balance). See CONTEXT for the concrete balance targets already captured.
+- **Cut order if slipping:** Block O (already deferred) → full M art (keep a light version) → Tier-2 danger overlays.
+- **⚠ M-before-L risk (accepted, mitigated):** L is the cheapest completeness signal; if M overruns it must
+  NOT swallow L. Mitigation = L-minimal wiring done early (in the K week), full L after M.
 
 ## Phase 1 — World 1 / Chapter 1 (to near-final quality)
 
@@ -80,8 +94,15 @@ Chapter card + Battle Commenced (done). Ending slides → World Finished → Cha
 ### Block M — Environment art pass (de-greybox)
 Swap the greybox floor / walls / shelves for **sourced** meshes + materials (Synty/Fab — *source, don't create*; the user is a coder). Near-zero code: wires into existing actors — the rigged shelf's base-hinge `Pivot` + auto-sized blast rectangle already carry a real bookshelf model, and there's a standing deferred note to swap the greybox cube. **Time-boxed, downstream of the boss fight (J) + the full loop (L)** — environment art is a classic rabbit hole and this is a *coding* final. A **light** version (a decent floor material + one real shelf mesh) may be pulled forward for a demo/morale boost without opening the full pass.
 
+### Block O — Balance pass + progression (DEFERRED, may be cut)
+Moved out of Block J and after N on 2026-07-21 — the grader weights visuals over balance, so this is the
+first thing cut if the buffer is tight. Two parts: **(1) the Block J balance pass** — real per-unit damage
+values, MoveRanges, `ConfuseCastRange`, mob pacing, and the flat-vs-data env-damage decision (concrete
+targets in CONTEXT); **(2) H2 progression** — XP/mid-battle leveling/Mana (see the H2 detail block above).
+Do only if time remains after N; a rough-but-complete demo beats a balanced-but-unfinished one for the grade.
+
 ### Block N — Onboarding
-Teach the manipulation loop. **Last** — only once mechanics are frozen.
+Teach the manipulation loop. **Last mechanics block** — only once mechanics are frozen.
 - **Scripted turn order (tutorial override):** the Ch1 tutorial battle needs a *fixed* order — Nameless → the 3 mobs (nearest-to-Nameless first) → boss last — so onboarding can walk Movement → Confuse → Intimidate as a controlled beat. Build as an optional "scripted order" mode on `UTurnManager` that bypasses the DEX+d20 initiative roll for this encounter only; **initiative stays the default for all real battles.** Layout is already pre-positioned for this (2 mobs mid-field near Nameless for Intimidate/Confuse teaching, 1 mob by the boss).
 
 ---
