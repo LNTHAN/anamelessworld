@@ -26,6 +26,10 @@ public:
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
 
+    // Read-only access for the range-ring indicator (Block K) — so the ring reads
+    // the ability's real AoE radius instead of a duplicated number.
+    float GetIntimidateRadius() const { return IntimidateRadius; }
+
 protected:
 
     // Impact damage applied when a shoved enemy slams into something solid.

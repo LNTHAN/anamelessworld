@@ -102,6 +102,14 @@ void UGA_Provoke::ActivateAbility(
                     UE_LOG(LogTemp, Log,
                         TEXT("GA_Provoke: %s resisted Confuse (status-immune) — effect refused to apply."),
                         *TargetName);
+
+                    // Floating "Immune" over the boss (status immunity refused Confuse).
+                    if (ABaseCharacter* ImmuneTarget = Cast<ABaseCharacter>(TargetASC->GetAvatarActor()))
+                    {
+                        ImmuneTarget->ShowCombatText(
+                            FText::FromString(TEXT("Immune")),
+                            FLinearColor(0.60f, 0.90f, 1.0f, 1.0f));   // cyan-white
+                    }
                 }
         }
     }

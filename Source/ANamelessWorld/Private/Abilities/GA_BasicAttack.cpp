@@ -233,6 +233,14 @@ void UGA_BasicAttack::ActivateAbility(
         UE_LOG(LogTemp, Log,
             TEXT("GA_BasicAttack: Miss! %s dodged the attack."),
             *TargetCharacter->GetName());
+            
+        // Floating "Miss!" over the dodger (Block K feedback).
+        if (ABaseCharacter* MissTarget = Cast<ABaseCharacter>(TargetASC->GetAvatarActor()))
+        {
+            MissTarget->ShowCombatText(
+                FText::FromString(TEXT("Miss!")),
+                FLinearColor(0.90f, 0.90f, 0.90f, 1.0f));   // neutral off-white
+        }
     }
 
     // Store context so FinishAttack() can call EndAbility after the timer fires.

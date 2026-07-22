@@ -88,6 +88,17 @@ Make the board *readable* so the manipulation puzzle can be played on purpose. �
 
 **Juice:** status icons over units, ability VFX, the confusion + bookshelf-crash visuals, more screenshake. Also the deferred Intimidate polish (smooth panic-slide + fall-over, replacing the teleport) and the toppled-shelf linger/fade.
 
+**Animation strand (added 2026-07-21) — a parallel track through Block K.** Make the body show state, not just the HUD. Uses the existing FProperty-reflection pattern (`SetIsAttacking`/`SetIsDead`) + a name-driven montage helper. Assets: TinyHero (enemy) set is rich; BattleWizard (Nameless) covers his kit; RPGHero (boss) is sparse but he's status-immune so he never needs dizzy/backpedal — attack + hit-react + victory is enough.
+- **Per-ability attack anims** — distinct clips for Basic vs Heavy vs Confuse vs Intimidate (currently all share one `bIsAttacking`).
+- **Getting-hit reaction** — fires on damage received; pairs with item #1's floating combat text (same moment).
+- **Dizzy** — loops while `State.Confused` is on the unit.
+- **Backpedal / stagger-back** — for the Intimidated/displaced beat (pairs with item #3 threat-line legibility).
+- **Victory / defeat** poses — play on `OnCombatEnded` (win vs lose), and defeat pairs with L-minimal's screens.
+
+**Confirmed build order (locked 2026-07-21):** (1) floating combat text → (2) range indicators (cyan move zone + red Confuse ring) → (3) enemy-intent threat lines → (4) warm-up side-tasks (mob-pacing fix + L-minimal win/lose). Animation strand woven in where it pairs (hit-react with #1, backpedal/dizzy with #3, victory/defeat with #4/L).
+
+**STATUS (2026-07-22): items #1–#3 DONE** (Session 41 — full detail in CONTEXT.md "Block K core" section). Item #2's move zone became **terrain-exact tiles** (user overrode the circular-zone default) + gained **red/grey target auras**. Still open: two **click-to-inspect optionals** (click-toggle enemy threat zones + character cards on click) — next session — plus the #4 side-tasks (mob-pacing, L-minimal), then dizzy/backpedal/victory/defeat anims as time allows.
+
 ### Block L — Cinematic chapter loop
 Chapter card + Battle Commenced (done). Ending slides → World Finished → Chapter 2 teaser, reusing the configurable cutscene widget.
 

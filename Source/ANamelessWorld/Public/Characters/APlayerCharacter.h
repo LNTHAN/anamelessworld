@@ -11,6 +11,8 @@
 
 class UDialogueComponent;
 class AInteractableActor;
+class UDecalComponent;
+class UInstancedStaticMeshComponent;
 
 UCLASS()
 class ANAMELESSWORLD_API APlayerCharacter : public ABaseCharacter
@@ -80,6 +82,31 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ANW|Combat")
     float ConfuseCastRange = 600.f;
 
+    // ── Range indicators (Block K) ───────────────────────────────────────────
+    // Terrain-exact move zone: one tile per reachable navmesh cell (FE-style).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ANW|UI")
+    UInstancedStaticMeshComponent* MoveReachISM;
+
+    // Red ring for whatever targeted/AoE ability is armed (Confuse cast range,
+    // Intimidate AoE, future abilities). Sized per-ability by the controller.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ANW|UI")
+    UDecalComponent* AbilityRangeDecal;
+
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
+    void SetMoveRangeVisible(bool bVisible);
+
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
+    void SetAbilityRangeVisible(bool bVisible);
+
+    // Resize the ability ring to a radius (cm), just before showing it.
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
+    void SetAbilityRingRadius(float Radius);
+
+    // Ring radius for an armed ability tag, read from the ability's own range so
+    // the indicator can't drift from the effect. 0 = this ability has no ring.
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
+    float GetAbilityRingRadius(FName Tag) const;
+
     // Interact command: rig the given object. Gated like every other action
     // (PlayerTurn + Action stock) plus a range check. Returns true only if it
     // actually armed (spent the Action) — the controller uses that to decide
@@ -118,4 +145,7 @@ public:
 
 private:
     void FireAbility(const FName& TagName);
+
+    // Rebuilds the reachable-tile set for the current position + MoveRange.
+    void ComputeMoveReachable();
 };

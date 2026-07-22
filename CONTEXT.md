@@ -1,19 +1,84 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block K — UI / clarity polish (VISUAL-FIRST reprioritization, 2026-07-21)
-**Plan changed 2026-07-21:** grader weights visuals over balance, so Block J's balance pass + H2 are
-deferred to **Block O (may be cut)**; effort shifts to K (UI) then M (art). Block J's *systems* are done.
-New order: **K → L → M → N → (O if time)** (L before M — secure the complete-loop signal before the art rabbit hole). See ROADMAP delivery schedule + [[deadline-coding-final]].
-Today ≈ Jul 21, ~25 days to Aug 15 — on track, buffer real-but-tight, M-art is the swing risk.
+## ▶ NEXT SESSION: Block K optionals → finish → L
+Block K **core (items #1–#3, the locked legibility layer) is DONE** (see section below). Remaining:
+- **Optionals (user-requested, deferred to after the core):** (1) **FE3H click-toggle enemy threat
+  zones** — click a unit → persistent threat decal (multiple on at once for planning), replacing/
+  augmenting the current hover; (2) **character cards on click** — ally card auto-on during its turn or
+  by click-toggle; clicking an enemy during an ally turn swaps in the enemy card. Both fire on clicking
+  a unit → build as one "click-to-inspect" pass.
+- **Two small "this week" tasks still pending:** (a) **mob-pacing fix** (bump mob MoveRange / move mobs
+  closer — demoability, NOT the deferred balance pass); (b) **L-minimal** — wire win/lose screens into
+  the existing `OnCombatEnded_Event` Level BP hook (see LEVELBP.md).
+- Then **L → M → N** per the delivery plan. See [[deadline-coding-final]].
 
-**Next session = Block K (start the grade-visible legibility + feedback):** highest-value items —
-floating combat text (damage numbers / "Miss!" / "Resisted!" / **"Immune"**), the **Confuse cast-range
-ring + valid-target highlight** (600 range enforced but currently clicking blind), enemy-intent
-threat-lines, movement-range zone, status icons. Full spec in ROADMAP Block K. **Plus two small tasks
-this week:** (a) **5-min mob-pacing fix** (bump mob MoveRange from 300 / move mobs closer — pure
-demoability, NOT the deferred balance pass); (b) **L-minimal** — wire the win/lose screens now (the
-`OnCombatEnded_Event` hook exists in the Level BP, see LEVELBP.md) so a complete loop always exists
-regardless of how the M art block goes.
+## Block K — clarity & feedback CORE (items #1–#3) — DONE
+Large visual-legibility pass; each item's design was locked with the user, then built. Workflow: Claude
+wrote code, user applied. New order confirmed **#1 → #2 → #3** + an **animation strand** woven in.
+
+### Item #1 — Floating combat text + hit-react + stay-dead
+- **`UFloatingCombatText : UUserWidget`** (Public/UI/) with `Init(FText, FLinearColor)` BlueprintImplementable.
+  `WBP_FloatingText` (reparented) = TextBlock + **"Popup"** UMG anim (Render Transform Translation Y 0→−45
+  + **Render Opacity** 1→1→0 — NOT Color-and-Opacity, so the C++ tint survives). `Init` sets Text + Color
+  (Make Slate Color) + Play Animation.
+- **`ABaseCharacter::ShowCombatText(FText, FLinearColor)`** spawns a transient **Screen-space WidgetComponent**
+  over the head, casts to UFloatingCombatText → `Init`, self-destroys via `TWeakObjectPtr` + 1.3s timer.
+  `FloatingTextClass` (TSubclassOf) set per character BP.
+- **Call sites:** damage numbers in `UCRPGAttributeSet::PostGameplayEffectExecute` (threat red 0.90,0.16,0.16);
+  "Miss!" (GA_BasicAttack miss branch, off-white 0.90,0.90,0.90); "Immune" (GA_Provoke resisted + GA_Intimidate
+  immune-skip, cyan-white 0.60,0.90,1.0); "Resisted!" (GA_Intimidate held-ground, amber 1.0,0.65,0.15).
+- **Hit-react anim:** `ABaseCharacter::PlayHitReact()` (bIsDead guard) → `SetIsHit(true)` (FProperty reflection,
+  same pattern as SetIsAttacking) + `EndHitReact` timer (`HitReactDuration` 0.4s) → SetIsHit(false). Fired from
+  PostGameplayEffectExecute **only if GetHealth() > 0** (survivors flinch; a lethal hit lets the death anim win).
+  Each AnimBP: `bIsHit` bool + **Hit state** in the Combat State Machine (Idle↔Hit, Loop OFF). Boss (RPGHero)
+  sparse — Hit state optional (SetIsHit no-ops).
+- **Stay-dead fix:** looping death anim → uncheck **Loop** on the death sequence + make Death state **terminal**.
+  `Die()` cleanup: **`SetNavObstacleEnabled(true)`** (corpses stay SOLID = tactical terrain — user's call) +
+  `HealthBarWidget->SetVisibility(false)`.
+
+### Item #2 — Range indicators (§9 colour: cyan=move, red=ability/threat) + target auras
+- **Shared decal master `M_RangeZone`** (Deferred Decal): radial `R = Distance(TexCoord, 0.5)×2` → **circle mask**
+  (Ceil path) + **border band** (Abs/BorderThickness). Params FillColor/BorderColor/BorderThickness/FillOpacity/
+  BorderOpacity → 3 instances: **MI_MoveRange** (cyan/deep-blue), **MI_AbilityRange** (red/crimson), **MI_ThreatRange**
+  (red/blood-red). *(Move zone later swapped OFF decals — see below — but the master + other two instances stay.)*
+- **Move zone = TERRAIN-EXACT** (user overrode §9's circle default): **`MoveReachISM`** (UInstancedStaticMeshComponent,
+  absolute transform) on APlayerCharacter. `ComputeMoveReachable()` grid-samples the navmesh (`Step` 50) + path-
+  distance test (`FindPathToLocationSynchronously ≤ MoveRange`) → one tile (engine Plane, **M_MoveTile** cyan
+  translucent unlit) per reachable cell. Recompute on show, clear on hide. Reads as **tiles/blocky** (accepted);
+  smooth marching-squares outline = deferred. Gated: player turn + `bMoveAvailable` + Idle (hides after moving).
+- **Ability ring (generic, party-ready):** `AbilityRangeDecal` on APlayerCharacter, radius per armed ability via
+  **`GetAbilityRingRadius(Tag)`** (Confuse→ConfuseCastRange; Intimidate→`GA_Intimidate::GetIntimidateRadius()` read
+  off the granted ability, no drift; Interact→InteractRange; else 0). Shown in Targeting/Confirming. `SetAbilityRingRadius`
+  resizes it live.
+- **Enemy threat zone:** `ThreatRangeDecal` on AEnemyCharacter (boss inherits), radius `MoveRange + AttackRange`,
+  shown **on hover** — controller `UpdateHoveredEnemy()` in PlayerTick (ECC_Pawn cursor trace; **only in Idle**, so it
+  doesn't clutter targeting).
+- **Target auras (red/grey):** `SetTargetAura(ETargetAura None/Targetable/Immune)` on AEnemyCharacter via SkeletalMesh
+  **`SetOverlayMaterial`**. Controller `UpdateTargetAuras()` (called from UpdateRangeIndicators): while a **status-ability**
+  ring shows, living in-range enemies glow **RED** (affectable) / **GREY** (has `Immunity.Status` — the boss); else none.
+  Materials: **M_Aura** (fresnel rim) → **MI_TargetAura** red / **MI_ImmuneAura** grey. Grey = free "he's immune" teaching.
+- Controller **`UpdateRangeIndicators()`** owns move-zone + ability-ring visibility; called from ArmAbility + ResetTargeting.
+  Overlay-material needs **Used with Skeletal Mesh** on M_Aura.
+
+### Item #3 — Enemy-intent threat lines (arced, red/yellow, live)
+- **Design (locked):** RED line enemy→its **ally-target**, **player turn only**, **imminent-only** (target within
+  `MoveRange+AttackRange`). YELLOW line for **Confused** enemies → current-nearest, from cast **until the start of its
+  own turn** (spans player+enemy turns), **always shown** (exempt from imminent rule), **SOLID if it'll strike this turn /
+  FADED (0.35) if only approaching**. **No predictive preview** — lines are **live current-truth snapshots** (per-frame),
+  never a promise the game can't keep (a confused unit's "nearest" only resolves at its own turn; other units move on
+  initiative). Natural target = "the ally it would strike" — today `PlayerTarget`, structured so multi-ally is a one-spot change.
+- **`AEnemyCharacter`:** `GetIntendedTarget()` (confused→`FindNearestOtherCombatant` else `PlayerTarget`), `IsConfused()`
+  (State.Confused), `GetThreatRadius()` (MoveRange+AttackRange), `SetThreatLine(bShow,Target,Color,Opacity)` → **arced
+  `USplineMeshComponent`** (absolute, engine Cylinder, ForwardAxis Z; parabolic arc `Z(t)=4H·t(1−t)`, peak ~120; endpoints
+  at **+LineHeight** neck-height; `LineThickness`/`LineHeight` EditAnywhere tunables) driven by a dynamic MID.
+- **Controller `UpdateThreatLines()`** (PlayerTick): applies the red/yellow rules above, calls each enemy's SetThreatLine.
+- **Material `M_ThreatLine`** (Unlit/Translucent/Two-Sided): `LineColor×BaseBright` base **+** white streak
+  `Power(saw,Exp)×FlowBright` (crisp moving dash); flow direction = **sign of the Time×FlowSpeed** term (−0.8 = enemy→target).
+  Params driven per-frame by the MID. Tuned bold base + white flow; base-colour depth is material-tunable (Power/FlowBright/
+  BaseBright) with optional deeper controller colours.
+
+**Block K deferred/notes:** optionals (click-toggle threat + character cards) = next; move-zone smooth outline = later;
+threat-line/aura/tile colours are all live-tunable in materials or EditAnywhere props.
 
 ## Block J — BALANCE PASS — DEFERRED to Block O (2026-07-21)
 Was "next"; now deferred (grader doesn't weight balance). Concrete targets kept here for when Block O runs.
@@ -653,3 +718,4 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 38 | **Walk animation + camera follow** (short pass on top of I2): per-AnimBP `Speed` var + Walk state inside the existing Combat State Machine (InPlace clips, Speed>10/<10, Orient-to-Movement, Max Walk Speed 175/175/250 for Nameless/Boss/Enemy); camera trails the active combatant while walking via `SetFollowTarget` + a velocity-gated Tick re-aim that reuses FocusOn's easing. | ✓ |
 | 39 | **Block J — status immunity** (the block's only new logic): `Immunity.Status` tag granted data-driven from `bStatusImmune`; GE_Provoke "Require Tags to Apply/Continue" component blocks Confuse; Intimidate displacement skips immune units (collision damage still lands). Fixed GA_Provoke's lying success log (`WasSuccessfullyApplied`). Also: Aug 15 deadline + week plan locked; blocks M (env art) / N (onboarding) added; STORY.md skeleton created (local-only); playtest decisions recorded (SetByCaller damage + honest Hit% next, dice visuals split combat-compact/K vs cinematic/Phase-2). | ✓ |
 | 40 | **Block J — encounter + honest numbers** (long session): `UTurnManager::RegisterWorldCombatants` auto-gathers every ABaseCharacter (one Level BP node replaces 8; `SetupCombat` now a base virtual hook); 3-mob encounter (Person1/Person2 rows, EditAnywhere row handle); tactical camera spring-arm collision OFF (fixed unit-jams-establishing-shot). Data-driven damage: DT base + STR via SetByCaller into new GE_Damage; `CalculateAttackDamage`/`CalculateHitChance` shared by ability + forecast (no drift); Confuse gains `ConfuseCastRange` 600. Wrote **LEVELBP.md** (Level BP text mirror). Recorded Phase-2 data-driven ability system (deferred w/ rationale) + enriched Block K (range indicators, tiered enemy-intent). | ✓ |
+| 41 | **Block K core (items #1–#3)** (very long session — full detail in the Block K section above): #1 floating combat text (`UFloatingCombatText`/WBP + `ShowCombatText`; damage/Miss/Immune/Resisted) + hit-react anim (`PlayHitReact`/bIsHit, survivor-only) + stay-dead (loop-off + solid corpses + hide HP bar); #2 range indicators — **terrain-exact move zone** (`MoveReachISM` navmesh flood + tiles), generic ability ring (`GetAbilityRingRadius`), enemy threat decal on hover, **red/grey target auras** (SkeletalMesh overlay), shared `M_RangeZone` master + instances; #3 **arced enemy-intent lines** (`USplineMeshComponent`, `GetIntendedTarget`/`UpdateThreatLines`, red natural / yellow confused solid-or-faded, live per-frame no-prediction, white-flow `M_ThreatLine`). Optionals (click-toggle threat + character cards) deferred to next. | ✓ |

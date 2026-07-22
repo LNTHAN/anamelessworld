@@ -96,6 +96,21 @@ void UCRPGAttributeSet::PostGameplayEffectExecute(
             float Damage = -Data.EvaluatedData.Magnitude;
             UE_LOG(LogTemp, Warning, TEXT("[Combat] %s dealt %.0f damage to %s (HP: %.0f / %.0f)"),
                 *InstigatorName, Damage, *GetOwningActor()->GetName(), ClampedHealth, GetMaxHealth());
+
+            // Floating damage number over the victim's head (Block K feedback).
+            if (OwningCharacter)
+            {
+                OwningCharacter->ShowCombatText(
+                    FText::AsNumber((int32)Damage),
+                    FLinearColor(0.90f, 0.16f, 0.16f, 1.0f));   // threat red — §9 (RGBA 0.90,0.16,0.16,1.0)
+            }
+
+            // Flinch — only if they SURVIVED. GetHealth() is already clamped above,
+            // so >0 means non-fatal; a lethal hit falls through to Die() below.
+            if (OwningCharacter && GetHealth() > 0.f)
+            {
+                OwningCharacter->PlayHitReact();
+            }
         }
 
         // ── Death trigger ────────────────────────────────────────────────────

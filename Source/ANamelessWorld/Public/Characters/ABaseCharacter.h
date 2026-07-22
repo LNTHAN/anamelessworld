@@ -44,6 +44,7 @@ class UGameplayEffect;    // Used for default attribute initialisation effect
 class UGameplayAbility;   // Used for the DefaultAbilities array
 class UWidgetComponent;
 class UTurnManager;
+class UFloatingCombatText;
 
 
 // ── Class Declaration ─────────────────────────────────────────────────────────
@@ -163,6 +164,26 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
     void SetIsDead(bool bDead);
 
+    // Plays a brief flinch when this character takes NON-fatal damage. Sets bIsHit
+    // on the AnimBP, then clears it after HitReactDuration so the Hit state exits.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
+    void PlayHitReact();
+
+    // Sets bIsHit on the Animation Blueprint (mirror of SetIsAttacking/SetIsDead).
+    UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
+    void SetIsHit(bool bHit);
+
+    // ── Combat feedback (Block K) ────────────────────────────────────────────
+    // The WBP_FloatingText class to spawn for combat popups. Set per character BP
+    // (all three point at the same WBP_FloatingText).
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Feedback")
+    TSubclassOf<UUserWidget> FloatingTextClass;
+
+    // Spawns one floating combat-text popup over this character's head. Called from
+    // C++ wherever a result should be shown: damage numbers (from the AttributeSet),
+    // "Miss!"/"Immune"/"Resisted!" (from the abilities, wired in a later step).
+    UFUNCTION(BlueprintCallable, Category = "ANW|Feedback")
+    void ShowCombatText(const FText& Text, FLinearColor Color);
 
     // ── Movement ─────────────────────────────────────────────────────────────
     // How far this character may travel in ONE turn, in world units (cm),
@@ -276,6 +297,15 @@ protected:
     FDataTableRowHandle CharacterRowHandle;
 
     // ── State ────────────────────────────────────────────────────────────────
+
+    // Timer callback — clears bIsHit so the Hit state returns to Idle.
+    void EndHitReact();
+
+    // How long the flinch holds before returning to Idle. Tune per character.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Animation")
+    float HitReactDuration = 0.4f;
+
+    FTimerHandle HitReactTimerHandle;
 
     UPROPERTY(BlueprintReadOnly, Category = "ANW|State")
     bool bIsDead = false;

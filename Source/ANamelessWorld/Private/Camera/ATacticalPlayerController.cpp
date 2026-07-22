@@ -8,6 +8,9 @@
 #include "Camera/ATacticalCameraPawn.h"
 #include "Interactables/AInteractableActor.h"
 #include "Utilities/UCRPGCombatLibrary.h"
+#include "Characters/AEnemyCharacter.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayTagContainer.h"
 
 
 void ATacticalPlayerController::BeginPlay()
@@ -66,6 +69,8 @@ void ATacticalPlayerController::ArmAbility(FName TagName)
     TargetingPhase = AbilityRequiresTarget(TagName)
         ? ETargetingPhase::Targeting
         : ETargetingPhase::Confirming;
+
+    UpdateRangeIndicators();
 }
 
 void ATacticalPlayerController::OnMoveClicked()
@@ -131,6 +136,8 @@ void ATacticalPlayerController::OnMoveClicked()
     FHitResult Hit;
     if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit)) return;
     ControlledCharacter->TryMoveTo(Hit.Location);
+
+    UpdateRangeIndicators();   // move may have been spent → hide the move zone
 }
 
 void ATacticalPlayerController::OnAttackPressed()
@@ -200,6 +207,8 @@ void ATacticalPlayerController::ResetTargeting()
     ArmedAbilityTag = NAME_None;
     TargetingPhase = ETargetingPhase::Idle;
     PendingTarget = nullptr;
+
+    UpdateRangeIndicators();
 }
 
 void ATacticalPlayerController::OnAbilityOnePressed()
@@ -338,4 +347,154 @@ bool ATacticalPlayerController::GetActiveForecast(
     }
 
     return false;
+}
+
+void ATacticalPlayerController::UpdateThreatLines()
+{
+    if (!ControlledCharacter || !ControlledCharacter->TurnManager) return;
+
+    UTurnManager* TM = ControlledCharacter->TurnManager;
+    const bool bPlayerTurn = TM->GetCurrentState() == ETurnState::PlayerTurn;
+    ABaseCharacter* Active = TM->GetCurrentCombatant();
+
+    const FLinearColor Red(1.0f, 0.03f, 0.04f, 1.0f);
+    const FLinearColor Yellow(1.0f, 0.62f, 0.0f, 1.0f);
+
+    for (ABaseCharacter* C : TM->GetTurnOrder())
+    {
+        AEnemyCharacter* E = Cast<AEnemyCharacter>(C);
+        if (!E) continue;
+
+        bool bShow = false;
+        FLinearColor Color = Red;
+        float Opacity = 1.0f;
+        ABaseCharacter* Target = E->IsAlive() ? E->GetIntendedTarget() : nullptr;
+
+        if (Target && Target->IsAlive())
+        {
+            const bool bInReach = FVector::Dist(
+                E->GetActorLocation(), Target->GetActorLocation()) <= E->GetThreatRadius();
+
+            if (E->IsConfused())
+            {
+                // Yellow: from cast until the start of its OWN turn. Solid if it will
+                // strike this turn, faded if it can only close distance.
+                if (E != Active)
+                {
+                    bShow = true;
+                    Color = Yellow;
+                    Opacity = bInReach ? 1.0f : 0.35f;
+                }
+            }
+            else if (bPlayerTurn && bInReach)
+            {
+                // Red: natural threat, shown for planning, imminent only.
+                bShow = true;
+                Color = Red;
+                Opacity = 1.0f;
+            }
+        }
+
+        E->SetThreatLine(bShow, Target, Color, Opacity);
+    }
+}
+
+void ATacticalPlayerController::UpdateRangeIndicators()
+{
+    if (!ControlledCharacter) return;
+
+    const bool bPlayerTurn = ControlledCharacter->TurnManager
+        && ControlledCharacter->TurnManager->GetCurrentState() == ETurnState::PlayerTurn;
+
+    // Move zone: your turn AND nothing armed (Idle).
+    ControlledCharacter->SetMoveRangeVisible(
+        bPlayerTurn && ControlledCharacter->bMoveAvailable
+        && TargetingPhase == ETargetingPhase::Idle);
+
+    // Ability ring: your turn AND an armed ability that HAS a ring (radius > 0),
+    // while picking a target or confirming. Radius = the ability's real range.
+    const bool bTargetingFlow =
+        TargetingPhase == ETargetingPhase::Targeting ||
+        TargetingPhase == ETargetingPhase::Confirming;
+    const float RingRadius = bTargetingFlow
+        ? ControlledCharacter->GetAbilityRingRadius(ArmedAbilityTag) : 0.f;
+
+    const bool bShowRing = bPlayerTurn && RingRadius > 0.f;
+    if (bShowRing) ControlledCharacter->SetAbilityRingRadius(RingRadius);
+    ControlledCharacter->SetAbilityRangeVisible(bShowRing);
+
+    UpdateTargetAuras();
+}
+
+void ATacticalPlayerController::UpdateTargetAuras()
+{
+    if (!ControlledCharacter) return;
+
+    const bool bPlayerTurn = ControlledCharacter->TurnManager
+        && ControlledCharacter->TurnManager->GetCurrentState() == ETurnState::PlayerTurn;
+
+    // Auras only for enemy-targeting status abilities (not Interact).
+    const bool bStatusAbility =
+        ArmedAbilityTag == FName("Ability.Debuff.Confuse") ||
+        ArmedAbilityTag == FName("Ability.Debuff.Intimidate");
+    const bool bTargetingFlow =
+        TargetingPhase == ETargetingPhase::Targeting ||
+        TargetingPhase == ETargetingPhase::Confirming;
+    const bool bAurasActive = bPlayerTurn && bStatusAbility && bTargetingFlow;
+
+    const float Radius = bAurasActive
+        ? ControlledCharacter->GetAbilityRingRadius(ArmedAbilityTag) : 0.f;
+    const FVector Origin = ControlledCharacter->GetActorLocation();
+    const FGameplayTag ImmuneTag = FGameplayTag::RequestGameplayTag(FName("Immunity.Status"));
+
+    TArray<AActor*> Enemies;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyCharacter::StaticClass(), Enemies);
+    for (AActor* A : Enemies)
+    {
+        AEnemyCharacter* E = Cast<AEnemyCharacter>(A);
+        if (!E) continue;
+
+        ETargetAura State = ETargetAura::None;
+        if (bAurasActive && E->IsAlive()
+            && FVector::Dist(Origin, E->GetActorLocation()) <= Radius)
+        {
+            const bool bImmune = E->GetAbilitySystemComponent()
+                && E->GetAbilitySystemComponent()->HasMatchingGameplayTag(ImmuneTag);
+            State = bImmune ? ETargetAura::Immune : ETargetAura::Targetable;
+        }
+        E->SetTargetAura(State);
+    }
+}
+
+void ATacticalPlayerController::UpdateHoveredEnemy()
+{
+    AEnemyCharacter* NewHover = nullptr;
+
+    // Only hover-threat in Idle — during ability targeting the ring + auras own
+    // the board; a stray threat circle is just clutter.
+    if (TargetingPhase == ETargetingPhase::Idle)
+    {
+        FHitResult Hit;
+        if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
+        {
+            if (AEnemyCharacter* E = Cast<AEnemyCharacter>(Hit.GetActor()))
+            {
+                if (E->IsAlive()) NewHover = E;
+            }
+        }
+    }
+
+    if (NewHover != HoveredEnemy)
+    {
+        if (HoveredEnemy) HoveredEnemy->SetThreatRangeVisible(false);
+        HoveredEnemy = NewHover;
+        if (HoveredEnemy) HoveredEnemy->SetThreatRangeVisible(true);
+    }
+}
+
+void ATacticalPlayerController::PlayerTick(float DeltaTime)
+{
+    Super::PlayerTick(DeltaTime);
+    UpdateHoveredEnemy();
+    UpdateThreatLines();
 }

@@ -12,10 +12,34 @@
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
 #include "Interactables/AInteractableActor.h"
+#include "Components/DecalComponent.h"
+#include "Abilities/GA_Intimidate.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 APlayerCharacter::APlayerCharacter()
 {
     DialogueComp = CreateDefaultSubobject<UDialogueComponent>(TEXT("Dialogue"));
+
+    MoveReachISM = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("MoveReachISM"));
+    MoveReachISM->SetupAttachment(RootComponent);
+    // Absolute so the tiles stay put in the world — they must NOT follow or rotate
+    // with Nameless (he faces targets, and moving hides them anyway).
+    MoveReachISM->SetUsingAbsoluteLocation(true);
+    MoveReachISM->SetUsingAbsoluteRotation(true);
+    MoveReachISM->SetUsingAbsoluteScale(true);
+    MoveReachISM->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    MoveReachISM->SetCanEverAffectNavigation(false);
+    MoveReachISM->SetVisibility(false);
+
+    // Engine unit plane (100×100uu, faces up) as the tile mesh; material set in BP.
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneMesh(TEXT("/Engine/BasicShapes/Plane.Plane"));
+    if (PlaneMesh.Succeeded()) MoveReachISM->SetStaticMesh(PlaneMesh.Object);
+
+    AbilityRangeDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("AbilityRangeDecal"));
+    AbilityRangeDecal->SetupAttachment(RootComponent);
+    AbilityRangeDecal->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+    AbilityRangeDecal->SetVisibility(false);
 }
 
 void APlayerCharacter::BeginPlay()
@@ -237,4 +261,113 @@ void APlayerCharacter::CycleTarget()
             return;
         }
     }
+}
+
+void APlayerCharacter::SetMoveRangeVisible(bool bVisible)
+{
+    if (!MoveReachISM) return;
+
+    if (bVisible)
+    {
+        if (!MoveReachISM->IsVisible())   // recompute only on hidden → shown
+        {
+            ComputeMoveReachable();
+            MoveReachISM->SetVisibility(true);
+        }
+    }
+    else
+    {
+        MoveReachISM->SetVisibility(false);
+        MoveReachISM->ClearInstances();
+    }
+}
+
+void APlayerCharacter::ComputeMoveReachable()
+{
+    if (!MoveReachISM) return;
+    MoveReachISM->ClearInstances();
+
+    UWorld* World = GetWorld();
+    UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+    if (!Nav) return;
+
+    const FVector Origin = GetActorLocation();
+    const float Step = 50.f;                       // grid spacing (cm) — tune for density
+    const int32 Cells = FMath::CeilToInt(MoveRange / Step);
+    const float TileScale = Step / 100.f;          // engine Plane is 100uu
+
+    for (int32 X = -Cells; X <= Cells; ++X)
+    {
+        for (int32 Y = -Cells; Y <= Cells; ++Y)
+        {
+            const FVector Sample = Origin + FVector(X * Step, Y * Step, 0.f);
+
+            // Cheap straight-line cull (skips the square's corners past the radius).
+            if (FVector::Dist2D(Origin, Sample) > MoveRange) continue;
+
+            // Is this spot actually on the navmesh? (excludes walls / gaps / shelves)
+            FNavLocation NavLoc;
+            if (!Nav->ProjectPointToNavigation(Sample, NavLoc,
+                    FVector(Step * 0.5f, Step * 0.5f, 200.f)))
+                continue;
+
+            // Terrain-exact part: real path distance must fit the move budget.
+            UNavigationPath* Path = UNavigationSystemV1::FindPathToLocationSynchronously(
+                World, Origin, NavLoc.Location);
+            if (!Path || !Path->IsValid() || Path->IsPartial()) continue;
+            if (Path->GetPathLength() > MoveRange) continue;
+
+            // Reachable → drop a tile just above the floor (world-space transform).
+            const FTransform T(FRotator::ZeroRotator,
+                NavLoc.Location + FVector(0.f, 0.f, 2.f),
+                FVector(TileScale, TileScale, 1.f));
+            MoveReachISM->AddInstance(T, /*bWorldSpace=*/true);
+        }
+    }
+}
+
+void APlayerCharacter::SetAbilityRangeVisible(bool bVisible)
+{
+    if (AbilityRangeDecal) AbilityRangeDecal->SetVisibility(bVisible);
+}
+
+void APlayerCharacter::SetAbilityRingRadius(float Radius)
+{
+    if (AbilityRangeDecal)
+    {
+        AbilityRangeDecal->DecalSize = FVector(512.f, Radius, Radius);
+        AbilityRangeDecal->MarkRenderStateDirty();
+    }
+}
+
+float APlayerCharacter::GetAbilityRingRadius(FName Tag) const
+{
+    // Confuse: same cast-range the targeting gate already enforces.
+    if (Tag == FName("Ability.Debuff.Confuse"))
+    {
+        return ConfuseCastRange;
+    }
+
+    // Intimidate: read the real AoE radius off the granted ability — no duplicate.
+    if (Tag == FName("Ability.Debuff.Intimidate"))
+    {
+        if (AbilitySystemComponent)
+        {
+            for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+            {
+                if (const UGA_Intimidate* Intim = Cast<UGA_Intimidate>(Spec.Ability))
+                {
+                    return Intim->GetIntimidateRadius();
+                }
+            }
+        }
+    }
+
+    // Interact: how close Nameless must stand to rig a shelf.
+    if (Tag == FName("Action.Interact"))
+    {
+        return InteractRange;
+    }
+
+    return 0.f;   // no ring for this ability (e.g. Interact)
 }

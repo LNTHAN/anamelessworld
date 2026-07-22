@@ -14,14 +14,51 @@
 #include "Camera/ATacticalPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Data/CRPGCharacterRow.h"
+#include "Components/DecalComponent.h"
+#include "Components/SplineMeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Components/CapsuleComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
+    ThreatRangeDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("ThreatRangeDecal"));
+    ThreatRangeDecal->SetupAttachment(RootComponent);
+    ThreatRangeDecal->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+    ThreatRangeDecal->SetVisibility(false);
+    ThreatLineMesh = CreateDefaultSubobject<USplineMeshComponent>(TEXT("ThreatLineMesh"));
+    ThreatLineMesh->SetupAttachment(RootComponent);
+    // Absolute so start/end are given in world space and never inherit the enemy's
+    // own transform (we rebuild the arc every frame).
+    ThreatLineMesh->SetUsingAbsoluteLocation(true);
+    ThreatLineMesh->SetUsingAbsoluteRotation(true);
+    ThreatLineMesh->SetUsingAbsoluteScale(true);
+    ThreatLineMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ThreatLineMesh->SetCanEverAffectNavigation(false);
+    ThreatLineMesh->SetCastShadow(false);
+    ThreatLineMesh->SetVisibility(false);
+    ThreatLineMesh->SetForwardAxis(ESplineMeshAxis::Z);       // cylinder's long axis = Z
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> LineMesh(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+    if (LineMesh.Succeeded()) ThreatLineMesh->SetStaticMesh(LineMesh.Object);
 }
 
 void AEnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (ThreatLineMaterial)
+    {
+        ThreatLineMID = UMaterialInstanceDynamic::Create(ThreatLineMaterial, this);
+        if (ThreatLineMesh) ThreatLineMesh->SetMaterial(0, ThreatLineMID);
+    }
+
+    // Size from total reach: move distance + strike range = the real danger radius.
+    if (ThreatRangeDecal)
+    {
+        const float ThreatRadius = MoveRange + AttackRange;
+        ThreatRangeDecal->DecalSize = FVector(512.f, ThreatRadius, ThreatRadius);
+        ThreatRangeDecal->MarkRenderStateDirty();
+    }
 
     // Prefer the DataTable row for AI tuning; fall back to the legacy Data Asset
     // so any enemy without a row assigned still behaves.
@@ -39,6 +76,11 @@ void AEnemyCharacter::BeginPlay()
     }
 }
 
+void AEnemyCharacter::SetThreatRangeVisible(bool bVisible)
+{
+    if (ThreatRangeDecal) ThreatRangeDecal->SetVisibility(bVisible);
+}
+
 void AEnemyCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget)
 {
     TurnManager = InTurnManager;
@@ -46,6 +88,17 @@ void AEnemyCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* I
 
     // Subscribe to OnTurnStarted now that we have a valid TurnManager.
     TurnManager->OnTurnStarted.AddDynamic(this, &AEnemyCharacter::ExecuteAITurn);
+}
+
+void AEnemyCharacter::SetTargetAura(ETargetAura State)
+{
+    if (!GetMesh()) return;
+
+    UMaterialInterface* Mat = nullptr;
+    if (State == ETargetAura::Targetable) Mat = AuraTargetMaterial;
+    else if (State == ETargetAura::Immune) Mat = AuraImmuneMaterial;
+
+    GetMesh()->SetOverlayMaterial(Mat);   // nullptr clears the aura
 }
 
 void AEnemyCharacter::ExecuteAITurn(ABaseCharacter* ActiveCombatant)
@@ -107,6 +160,54 @@ void AEnemyCharacter::PerformAITurn()
     }
 
     EngageTarget();
+}
+
+ABaseCharacter* AEnemyCharacter::GetIntendedTarget() const
+{
+    return IsConfused() ? FindNearestOtherCombatant() : PlayerTarget;
+}
+
+bool AEnemyCharacter::IsConfused() const
+{
+    UAbilitySystemComponent* MyASC = GetAbilitySystemComponent();
+    return MyASC && MyASC->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(FName("State.Confused")));
+}
+
+void AEnemyCharacter::SetThreatLine(bool bShow, AActor* Target, FLinearColor Color, float Opacity)
+{
+    if (!ThreatLineMesh) return;
+
+    if (!bShow || !Target)
+    {
+        ThreatLineMesh->SetVisibility(false);
+        return;
+    }
+
+    // Endpoints at neck/upper-body height on EACH unit (not the feet), so the line
+    // reads as connecting heads.
+    FVector Start = GetActorLocation();         Start.Z += LineHeight;
+    FVector End   = Target->GetActorLocation(); End.Z   += LineHeight;
+
+    const FVector Delta = End - Start;
+    const float Length = Delta.Size2D();
+    if (Length < 1.f) { ThreatLineMesh->SetVisibility(false); return; }
+
+    const FVector Horizontal(Delta.X, Delta.Y, 0.f);
+    const float ArcHeight = FMath::Min(120.f, Length * 0.4f);
+    const FVector StartTangent = Horizontal + FVector(0.f, 0.f,  4.f * ArcHeight);
+    const FVector EndTangent   = Horizontal + FVector(0.f, 0.f, -4.f * ArcHeight);
+
+    ThreatLineMesh->SetStartScale(FVector2D(LineThickness, LineThickness), false);
+    ThreatLineMesh->SetEndScale(FVector2D(LineThickness, LineThickness), false);
+    ThreatLineMesh->SetStartAndEnd(Start, StartTangent, End, EndTangent, /*bUpdateSpline=*/true);
+
+    if (ThreatLineMID)
+    {
+        ThreatLineMID->SetVectorParameterValue(FName("LineColor"), Color);
+        ThreatLineMID->SetScalarParameterValue(FName("LineOpacity"), Opacity);
+    }
+    ThreatLineMesh->SetVisibility(true);
 }
 
 void AEnemyCharacter::EngageTarget()

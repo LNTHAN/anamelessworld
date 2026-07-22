@@ -10,6 +10,7 @@
 
 class APlayerCharacter;
 class ABaseCharacter;
+class AEnemyCharacter;
 
 // The targeting mode's three beats. Idle = normal (click moves). Targeting =
 // an ability is armed, waiting for the player to click a target. Confirming =
@@ -54,6 +55,10 @@ class ANAMELESSWORLD_API ATacticalPlayerController : public APlayerController
     GENERATED_BODY()
 
 public:
+
+    // Per-frame: track which enemy the cursor is over, to toggle its threat zone.
+    virtual void PlayerTick(float DeltaTime) override;
+
     virtual void BeginPlay() override;
 
     // Where player commands are set up (the mouse/keys we listen for).
@@ -130,6 +135,20 @@ public:
     void BindToTurnManager();
     
 private:
+
+    // Shows the right ally indicator for the current turn + targeting state.
+    void UpdateRangeIndicators();
+
+    // Draws every enemy's intent line each frame (red natural / yellow confused).
+    void UpdateThreatLines();
+
+    // Toggles the hovered enemy's threat zone.
+    void UpdateHoveredEnemy();
+    AEnemyCharacter* HoveredEnemy = nullptr;
+
+    // Sets red/grey/none auras on enemies for the armed status ability.
+    void UpdateTargetAuras();
+    
     // Left-click: behavior depends on ArmedAbilityTag (see .cpp).
     void OnMoveClicked();
 

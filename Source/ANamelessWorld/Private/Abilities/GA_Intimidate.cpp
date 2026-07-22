@@ -84,6 +84,11 @@ void UGA_Intimidate::ActivateAbility(
             {
                 UE_LOG(LogTemp, Log,
                     TEXT("GA_Intimidate: %s is status-immune — not displaced."), *Enemy->GetName());
+
+                Enemy->ShowCombatText(
+                    FText::FromString(TEXT("Immune")),
+                    FLinearColor(0.60f, 0.90f, 1.0f, 1.0f));   // cyan-white
+                
                 continue;
             }
         }
@@ -108,6 +113,10 @@ void UGA_Intimidate::ActivateAbility(
         else
         {
             UE_LOG(LogTemp, Log, TEXT("GA_Intimidate: %s held its ground."), *Enemy->GetName());
+            
+            Enemy->ShowCombatText(
+                FText::FromString(TEXT("Resisted!")),
+                FLinearColor(1.0f, 0.65f, 0.15f, 1.0f));   // amber
         }
     }
 

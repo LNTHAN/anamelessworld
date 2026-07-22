@@ -33,6 +33,10 @@
 
 #include "Data/CRPGCharacterRow.h"
 
+#include "UI/UFloatingCombatText.h"
+
+#include "TimerManager.h"
+
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTRUCTOR
 // ════════════════════════════════════════════════════════════════════════════
@@ -284,6 +288,15 @@ void ABaseCharacter::Die()
         // (e.g. a cast that was interrupted by the killing blow).
     }
 
+    // Guarantee the corpse blocks even if it died as the active mover (whose nav
+    // obstacle was toggled OFF for its move). A dead body should always be solid.
+    SetNavObstacleEnabled(true);
+
+    if (HealthBarWidget)
+    {
+        HealthBarWidget->SetVisibility(false);
+    }
+
     // TODO Session 5 (Animation): Play death montage here.
     // GetMesh()->GetAnimInstance()->Montage_Play(DeathMontage);
 
@@ -400,6 +413,64 @@ void ABaseCharacter::SetIsDead(bool bDead)
         bool* ValuePtr = Property->ContainerPtrToValuePtr<bool>(AnimInstance);
         if (ValuePtr) *ValuePtr = bDead;
     }
+}
+
+void ABaseCharacter::PlayHitReact()
+{
+    if (bIsDead) return;                 // corpses don't flinch
+    SetIsHit(true);
+    // Auto-clear after the flinch window. Object+method timer self-invalidates
+    // if this character is ever destroyed, so no dangling callback.
+    GetWorldTimerManager().SetTimer(
+        HitReactTimerHandle, this, &ABaseCharacter::EndHitReact, HitReactDuration, false);
+}
+
+void ABaseCharacter::EndHitReact()
+{
+    SetIsHit(false);
+}
+
+void ABaseCharacter::SetIsHit(bool bHit)
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (!AnimInstance) return;
+
+    FProperty* Property = AnimInstance->GetClass()->FindPropertyByName(FName("bIsHit"));
+    if (Property)
+    {
+        bool* ValuePtr = Property->ContainerPtrToValuePtr<bool>(AnimInstance);
+        if (ValuePtr) *ValuePtr = bHit;
+    }
+}
+
+void ABaseCharacter::ShowCombatText(const FText& Text, FLinearColor Color)
+{
+    if (!FloatingTextClass) return;
+
+    // A transient, screen-facing widget pinned over the head — same tech as the HP
+    // bar, but spawned fresh per hit and destroyed when its rise/fade anim ends.
+    UWidgetComponent* Popup = NewObject<UWidgetComponent>(this);
+    Popup->SetWidgetSpace(EWidgetSpace::Screen);          // always faces camera, stays crisp
+    Popup->SetWidgetClass(FloatingTextClass);
+    Popup->SetDrawSize(FVector2D(200.f, 80.f));
+    Popup->SetupAttachment(GetRootComponent());
+    Popup->SetRelativeLocation(FVector(0.f, 0.f, 150.f)); // above the head
+    Popup->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Popup->RegisterComponent();                           // makes it live in the world
+    Popup->InitWidget();                                  // force-create the UMG widget now
+
+    if (UFloatingCombatText* Widget = Cast<UFloatingCombatText>(Popup->GetUserWidgetObject()))
+    {
+        Widget->Init(Text, Color);
+    }
+
+    // Self-clean after the anim finishes (timer must outlast the UMG rise/fade).
+    FTimerHandle CleanupHandle;
+    TWeakObjectPtr<UWidgetComponent> WeakPopup(Popup);
+    GetWorldTimerManager().SetTimer(CleanupHandle, FTimerDelegate::CreateLambda([WeakPopup]()
+    {
+        if (WeakPopup.IsValid()) WeakPopup->DestroyComponent();
+    }), 1.3f, false);
 }
 
 void ABaseCharacter::FaceActor(const AActor* Target)
