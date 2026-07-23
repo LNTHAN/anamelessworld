@@ -1,12 +1,8 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block K optionals → finish → L
-Block K **core (items #1–#3, the locked legibility layer) is DONE** (see section below). Remaining:
-- **Optionals (user-requested, deferred to after the core):** (1) **FE3H click-toggle enemy threat
-  zones** — click a unit → persistent threat decal (multiple on at once for planning), replacing/
-  augmenting the current hover; (2) **character cards on click** — ally card auto-on during its turn or
-  by click-toggle; clicking an enemy during an ally turn swaps in the enemy card. Both fire on clicking
-  a unit → build as one "click-to-inspect" pass.
+## ▶ NEXT SESSION: side-tasks (mob-pacing + L-minimal) → L
+Block K **core (items #1–#3) DONE**; **click-to-inspect optionals — DONE** (unified 3-slot bottom HUD +
+pinned threat zones + corner-tucked mirrored cards; see section below). Remaining this week:
 - **Two small "this week" tasks still pending:** (a) **mob-pacing fix** (bump mob MoveRange / move mobs
   closer — demoability, NOT the deferred balance pass); (b) **L-minimal** — wire win/lose screens into
   the existing `OnCombatEnded_Event` Level BP hook (see LEVELBP.md).
@@ -77,8 +73,52 @@ wrote code, user applied. New order confirmed **#1 → #2 → #3** + an **animat
   Params driven per-frame by the MID. Tuned bold base + white flow; base-colour depth is material-tunable (Power/FlowBright/
   BaseBright) with optional deeper controller colours.
 
-**Block K deferred/notes:** optionals (click-toggle threat + character cards) = next; move-zone smooth outline = later;
+**Block K deferred/notes:** optionals now built (see next section); move-zone smooth outline = later;
 threat-line/aura/tile colours are all live-tunable in materials or EditAnywhere props.
+
+### Block K optionals — click-to-inspect — DONE
+Clicking a unit now inspects it — one pass covering BOTH deferred optionals, built on a **unified
+three-slot bottom HUD**: NameCard (left) / forecast arrow (center) / Inspect-or-Target card (right).
+Two design forks locked with the user: **"pin over hover"** + **"move-click clears all."**
+- **Pinned threat zones (FE3H):** click an enemy → its threat decal **PINS on** (survives the cursor
+  leaving; several at once for planning); click it again un-pins. Controller `TSet<AEnemyCharacter*>
+  PinnedEnemies` layered over the existing single-`HoveredEnemy` hover — **both drive the same
+  `SetThreatRangeVisible`**, so each layer checks the other before hiding (un-pin keeps it lit if still
+  hovered; hover keeps it lit if pinned). Move-click empty ground → `ClearInspection()` (drops all pins +
+  card); turn-start also clears (added to `OnCombatTurnStarted`, alongside `ResetTargeting`).
+- **Three-slot cards:**
+  - **Name Card (left)** = the current-turn unit (ally OR enemy), always. `GetNameCardUnit()` =
+    `TurnManager->GetCurrentCombatant()`. **The seamless trick: attacker == current unit**, so the left
+    slot never changes between idle and forecasting — only the right swaps + the arrow fades in.
+  - **Inspect/Target card (right)** = `GetTargetCardUnit()`: the forecast target if ANY forecast is live
+    (reuses `GetActiveForecast`), else the clicked unit (unless it's already the current-turn unit, to
+    avoid drawing the same unit twice).
+  - **Forecast arrow (center)** = `WBP_AbilityForecast` **stripped to just the arrow** (its own two unit
+    cards deleted — the corner cards own those now). Tick = IsValid(controller) → GetActiveForecast
+    Return Value → show + fill arrow / else collapse. `Out Attacker`/`Out Target` now unused.
+- **C++ (`ATacticalPlayerController`):** `ToggleInspect` / `ClearInspection` / `InspectedUnit` /
+  `PinnedEnemies`; split the old single `GetInspectCardUnit` into `GetNameCardUnit` + `GetTargetCardUnit`.
+  `OnMoveClicked` Idle branch traces **ECC_Pawn first** (living unit → ToggleInspect + return; corpse or
+  empty ground → ClearInspection + move).
+- **BP:** `WBP_InspectPanel` holds BOTH cards; one **`Sequence`** Tick drives each from its getter
+  (widget stays dumb — all "which unit?" logic in C++). `WBP_InspectPanel` + `WBP_AbilityForecast` each
+  spawned once in the Level BP.
+- **Skin pass DONE (full-width bottom bar):** all three slots consolidated into ONE **Horizontal Box** in
+  `WBP_InspectPanel` — `[NameCard (Fill) | SizeBox "ArrowBox" (fixed ~150–160w) | InspectCard (Fill)]` — so
+  they pack edge-to-edge with zero gap (the H-box guarantees adjacency; free-floating canvas bands couldn't).
+  `WBP_AbilityForecast` is **nested** inside ArrowBox (its standalone Level-BP spawn removed) and stripped to
+  just the arrow (Scale Box User-Specified ~1.5). **Consistent card size in every state:** ArrowBox always
+  reserves its width, and InspectCard's empty branch = **Hidden** (reserves its half) not Collapsed, so
+  NameCard never stretches — each card is `(barW − arrowW)/2` in all three states (name-only / both / forecast).
+- **InspectCard mirrored** via Flow Direction = Right-to-Left (portrait faces outward), HP/MP ProgressBars
+  exempted back to LTR in the shared `WBP_UnitCard` (no-op on the left card → one asset serves both sides).
+- **`WBP_UnitCard` redesign:** portrait = **full-height square** (`[Row]` is the H-box; portrait Size Box
+  Width Override == CardBG Height Override, ~170, kept equal so it stays square — fixed, since the aspect-ratio
+  lock collapsed it; `[Row]` padding 0 for flush-left); bigger Name/Lv/EXP/HP/MP fonts; HP/MP overlays set to
+  **Fill** for taller bars.
+- **`WBP_CommandMenu` repositioned** (abilities → middle-left, End Turn below them) to clear the bottom for the
+  card bar. **Deferred:** ~5px arrow/card height alignment + a cohesive look = the **whole-game UI theme pass**
+  (all sizes here are live dials — CardBG/portrait height, ArrowBox width, arrow scale, H-box anchor Min Y).
 
 ## Block J — BALANCE PASS — DEFERRED to Block O (2026-07-21)
 Was "next"; now deferred (grader doesn't weight balance). Concrete targets kept here for when Block O runs.
@@ -718,4 +758,5 @@ input/cursor code in APlayerCharacter; optional cleanup of now-unused
 | 38 | **Walk animation + camera follow** (short pass on top of I2): per-AnimBP `Speed` var + Walk state inside the existing Combat State Machine (InPlace clips, Speed>10/<10, Orient-to-Movement, Max Walk Speed 175/175/250 for Nameless/Boss/Enemy); camera trails the active combatant while walking via `SetFollowTarget` + a velocity-gated Tick re-aim that reuses FocusOn's easing. | ✓ |
 | 39 | **Block J — status immunity** (the block's only new logic): `Immunity.Status` tag granted data-driven from `bStatusImmune`; GE_Provoke "Require Tags to Apply/Continue" component blocks Confuse; Intimidate displacement skips immune units (collision damage still lands). Fixed GA_Provoke's lying success log (`WasSuccessfullyApplied`). Also: Aug 15 deadline + week plan locked; blocks M (env art) / N (onboarding) added; STORY.md skeleton created (local-only); playtest decisions recorded (SetByCaller damage + honest Hit% next, dice visuals split combat-compact/K vs cinematic/Phase-2). | ✓ |
 | 40 | **Block J — encounter + honest numbers** (long session): `UTurnManager::RegisterWorldCombatants` auto-gathers every ABaseCharacter (one Level BP node replaces 8; `SetupCombat` now a base virtual hook); 3-mob encounter (Person1/Person2 rows, EditAnywhere row handle); tactical camera spring-arm collision OFF (fixed unit-jams-establishing-shot). Data-driven damage: DT base + STR via SetByCaller into new GE_Damage; `CalculateAttackDamage`/`CalculateHitChance` shared by ability + forecast (no drift); Confuse gains `ConfuseCastRange` 600. Wrote **LEVELBP.md** (Level BP text mirror). Recorded Phase-2 data-driven ability system (deferred w/ rationale) + enriched Block K (range indicators, tiered enemy-intent). | ✓ |
+| 42 | **Block K optionals — click-to-inspect** (unified 3-slot bottom HUD): click a unit to inspect — pinned enemy threat zones (`TSet<AEnemyCharacter*> PinnedEnemies` layered over the hover, mutual keep-lit guard, move-click/turn-start clear); NameCard (left = current-turn unit) / forecast arrow (center) / Inspect-Target card (right); split `GetInspectCardUnit`→`GetNameCardUnit`+`GetTargetCardUnit`, `ToggleInspect`/`ClearInspection`, ECC_Pawn click branch; `WBP_InspectPanel` two-card `Sequence` Tick (widget dumb, logic in C++); `WBP_AbilityForecast` nested into a full-width Horizontal-Box bar (`[NameCard\|ArrowBox\|InspectCard]`, cards Fill, consistent size via Hidden-reserved slots) + stripped to just the arrow; `WBP_UnitCard` redesign (full-height square portrait + bigger fonts/bars, RTL-mirrored right card); `WBP_CommandMenu` repositioned to clear the bottom. Design forks locked: pin-over-hover + move-click-clears-all; final 5px alignment + cohesive skin deferred to a whole-game UI theme pass. | ✓ |
 | 41 | **Block K core (items #1–#3)** (very long session — full detail in the Block K section above): #1 floating combat text (`UFloatingCombatText`/WBP + `ShowCombatText`; damage/Miss/Immune/Resisted) + hit-react anim (`PlayHitReact`/bIsHit, survivor-only) + stay-dead (loop-off + solid corpses + hide HP bar); #2 range indicators — **terrain-exact move zone** (`MoveReachISM` navmesh flood + tiles), generic ability ring (`GetAbilityRingRadius`), enemy threat decal on hover, **red/grey target auras** (SkeletalMesh overlay), shared `M_RangeZone` master + instances; #3 **arced enemy-intent lines** (`USplineMeshComponent`, `GetIntendedTarget`/`UpdateThreatLines`, red natural / yellow confused solid-or-faded, live per-frame no-prediction, white-flow `M_ThreatLine`). Optionals (click-toggle threat + character cards) deferred to next. | ✓ |

@@ -84,6 +84,21 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
     ABaseCharacter* PendingTarget = nullptr;
 
+    // The unit whose detail card the inspect panel shows. Null = fall back to
+    // the active ally (its card auto-shows on its turn). Set by clicking a unit.
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
+    ABaseCharacter* InspectedUnit = nullptr;
+
+    // LEFT "name card": the current-turn unit (ally OR enemy). The panel polls
+    // this every frame. Null → hide.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    ABaseCharacter* GetNameCardUnit() const;
+
+    // RIGHT card: the ability TARGET while any forecast is up; otherwise the
+    // clicked unit (unless it's already the current-turn unit). Null → hide.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
+    ABaseCharacter* GetTargetCardUnit() const;
+
     // Arms an ability: the next left-click will target it instead of moving.
     // Called by command-menu buttons and by the 1/2/3 hotkeys. Refuses outside
     // PlayerTurn or with no Action left — same gate FireAbility checks anyway,
@@ -145,6 +160,18 @@ private:
     // Toggles the hovered enemy's threat zone.
     void UpdateHoveredEnemy();
     AEnemyCharacter* HoveredEnemy = nullptr;
+
+    // Click-to-inspect: pin a unit's card (+ an enemy's threat zone). Clicking the
+    // same enemy again un-pins it; clicking a fresh unit swaps the card in.
+    void ToggleInspect(ABaseCharacter* Unit);
+
+    // Drops every pinned zone + clears the inspected unit (move-click / turn-start).
+    void ClearInspection();
+
+    // Enemies whose threat zone is PINNED on (survives the cursor leaving them).
+    // Distinct from HoveredEnemy — the single, transient mouse-over zone.
+    UPROPERTY()
+    TSet<AEnemyCharacter*> PinnedEnemies;
 
     // Sets red/grey/none auras on enemies for the armed status ability.
     void UpdateTargetAuras();

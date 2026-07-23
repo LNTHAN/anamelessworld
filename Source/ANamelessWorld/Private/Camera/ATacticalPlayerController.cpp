@@ -132,10 +132,26 @@ void ATacticalPlayerController::OnMoveClicked()
         return;
     }
 
-    // Idle: this click is a move destination.
-    FHitResult Hit;
-    if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit)) return;
-    ControlledCharacter->TryMoveTo(Hit.Location);
+    // Idle: a click on a living unit inspects it; a click on the ground moves.
+    // Trace pawns first (ECC_Pawn) — capsules block it, the floor doesn't.
+    FHitResult PawnHit;
+    if (GetHitResultUnderCursor(ECC_Pawn, false, PawnHit))
+    {
+        if (ABaseCharacter* Unit = Cast<ABaseCharacter>(PawnHit.GetActor()))
+        {
+            if (Unit->IsAlive())   // a corpse falls through to a normal move
+            {
+                ToggleInspect(Unit);
+                return;
+            }
+        }
+    }
+
+    // Empty ground: drop any inspection, then move.
+    FHitResult FloorHit;
+    if (!GetHitResultUnderCursor(ECC_Visibility, false, FloorHit)) return;
+    ClearInspection();
+    ControlledCharacter->TryMoveTo(FloorHit.Location);
 
     UpdateRangeIndicators();   // move may have been spent → hide the move zone
 }
@@ -252,6 +268,7 @@ void ATacticalPlayerController::OnCombatTurnStarted(ABaseCharacter* ActiveCombat
     // a previous turn, or it hijacks every click (traces for a target that a plain
     // move-click will never satisfy) and the player can't move.
     ResetTargeting();
+    ClearInspection();   // pins + card don't carry across turns
 
     if (!ActiveCombatant) return;
 
@@ -466,6 +483,75 @@ void ATacticalPlayerController::UpdateTargetAuras()
     }
 }
 
+ABaseCharacter* ATacticalPlayerController::GetNameCardUnit() const
+{
+    // Whoever's turn it is — ally or enemy. Attacker == current unit, so this
+    // same slot serves both the idle name card AND the forecast's attacker.
+    if (ControlledCharacter && ControlledCharacter->TurnManager)
+    {
+        ABaseCharacter* Active = ControlledCharacter->TurnManager->GetCurrentCombatant();
+        if (Active && Active->IsAlive()) return Active;
+    }
+    return nullptr;
+}
+
+ABaseCharacter* ATacticalPlayerController::GetTargetCardUnit() const
+{
+    // A live forecast (player Confirming or enemy pre-strike) owns the right
+    // card — it shows the ability's target.
+    FAbilityForecast F;
+    ABaseCharacter* Attacker = nullptr;
+    ABaseCharacter* Target = nullptr;
+    if (GetActiveForecast(F, Attacker, Target) && Target) return Target;
+
+    // Otherwise the clicked unit — but not if it's the current-turn unit, which
+    // the left name card already shows (don't draw the same unit twice).
+    ABaseCharacter* Active = (ControlledCharacter && ControlledCharacter->TurnManager)
+        ? ControlledCharacter->TurnManager->GetCurrentCombatant() : nullptr;
+    if (InspectedUnit && InspectedUnit->IsAlive() && InspectedUnit != Active)
+        return InspectedUnit;
+
+    return nullptr;
+}
+
+void ATacticalPlayerController::ToggleInspect(ABaseCharacter* Unit)
+{
+    if (!Unit || !Unit->IsAlive()) return;
+
+    if (AEnemyCharacter* E = Cast<AEnemyCharacter>(Unit))
+    {
+        // Enemy: the pin IS the toggle. Pinned → un-pin (zone off); else pin it on.
+        if (PinnedEnemies.Contains(E))
+        {
+            PinnedEnemies.Remove(E);
+            // Keep it lit only if the cursor is over it right now (hover owns it).
+            if (E != HoveredEnemy) E->SetThreatRangeVisible(false);
+            if (InspectedUnit == E) InspectedUnit = nullptr;   // card back to default
+        }
+        else
+        {
+            PinnedEnemies.Add(E);
+            E->SetThreatRangeVisible(true);
+            InspectedUnit = E;
+        }
+        return;
+    }
+
+    // Ally (no threat zone) — just toggle its card on/off.
+    InspectedUnit = (InspectedUnit == Unit) ? nullptr : Unit;
+}
+
+void ATacticalPlayerController::ClearInspection()
+{
+    for (AEnemyCharacter* E : PinnedEnemies)
+    {
+        // Leave the hovered one lit — hover will manage it from here.
+        if (E && E != HoveredEnemy) E->SetThreatRangeVisible(false);
+    }
+    PinnedEnemies.Empty();
+    InspectedUnit = nullptr;
+}
+
 void ATacticalPlayerController::UpdateHoveredEnemy()
 {
     AEnemyCharacter* NewHover = nullptr;
@@ -486,7 +572,9 @@ void ATacticalPlayerController::UpdateHoveredEnemy()
 
     if (NewHover != HoveredEnemy)
     {
-        if (HoveredEnemy) HoveredEnemy->SetThreatRangeVisible(false);
+        // Don't hide the old one if it's pinned — the pin owns its zone now.
+        if (HoveredEnemy && !PinnedEnemies.Contains(HoveredEnemy))
+            HoveredEnemy->SetThreatRangeVisible(false);
         HoveredEnemy = NewHover;
         if (HoveredEnemy) HoveredEnemy->SetThreatRangeVisible(true);
     }
