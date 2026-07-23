@@ -83,6 +83,8 @@ void AEnemyCharacter::SetThreatRangeVisible(bool bVisible)
 
 void AEnemyCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget)
 {
+    Super::SetupCombat(InTurnManager, InPlayerTarget);
+
     TurnManager = InTurnManager;
     PlayerTarget = InPlayerTarget;
 

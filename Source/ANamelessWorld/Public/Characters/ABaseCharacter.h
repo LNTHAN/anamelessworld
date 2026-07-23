@@ -66,9 +66,9 @@ public:
     // Sets up the ASC replication mode.
     // Body is in ABaseCharacter.cpp.
 
-    // How this character joins combat. Base does nothing (the player needs no AI
-    // setup); AEnemyCharacter overrides it to subscribe its AI to the TurnManager.
-    virtual void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget) {}
+    // Base caches the TurnManager (so Die() can report instantly); AEnemyCharacter
+    // overrides to ALSO subscribe its AI — and must call Super::SetupCombat().
+    virtual void SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget);
 
 
     // ── GAS Interface Requirement ────────────────────────────────────────────
@@ -295,6 +295,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ANW|Data",
         meta = (RowType = "/Script/ANamelessWorld.CRPGCharacterRow"))
     FDataTableRowHandle CharacterRowHandle;
+    FText CachedDisplayName;
 
     // ── State ────────────────────────────────────────────────────────────────
 
@@ -311,4 +312,10 @@ protected:
     bool bIsDead = false;
     // Prevents Die() being called more than once (e.g. two effects landing on the
     // same frame could both trigger death). Checked at the start of Die().
+
+    // The referee running this fight, cached in SetupCombat() (called for every
+    // combatant by UTurnManager::RegisterWorldCombatants). Lets Die() report a
+    // death the instant it happens, not just at the next turn boundary.
+    UPROPERTY()
+    TObjectPtr<UTurnManager> CachedTurnManager = nullptr;
 };

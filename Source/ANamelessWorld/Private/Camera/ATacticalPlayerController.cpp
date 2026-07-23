@@ -22,6 +22,16 @@ void ATacticalPlayerController::BeginPlay()
     bEnableClickEvents = true;
     bEnableMouseOverEvents = true;
 
+    // Reassert Game-and-UI input on every level start. Open Level (e.g. the
+    // result screen's Retry) carries the viewport's input mode over from the
+    // previous map — if that was UI Only (set when the result screen showed),
+    // clicks and keys never reach gameplay and the opening dialogue stalls.
+    // This clears that carry-over so a fresh battle always accepts input.
+    FInputModeGameAndUI InputMode;
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    InputMode.SetHideCursorDuringCapture(false);
+    SetInputMode(InputMode);
+
     // Look through the level and grab Nameless so we can command him later.
     ControlledCharacter = Cast<APlayerCharacter>(
         UGameplayStatics::GetActorOfClass(this, APlayerCharacter::StaticClass()));

@@ -37,6 +37,8 @@
 
 #include "TimerManager.h"
 
+#include "TurnManager/UTurnManager.h"
+
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTRUCTOR
 // ════════════════════════════════════════════════════════════════════════════
@@ -231,6 +233,9 @@ bool ABaseCharacter::InitStatsFromRow()
         CharacterRowHandle.GetRow<FCRPGCharacterRow>(TEXT("InitStatsFromRow"));
     if (!Row) return false;   // handle set but row missing / wrong struct
 
+    // Cache the row's DisplayName so GetUnitName can prefer it over the Data Asset.
+    CachedDisplayName = Row->DisplayName;
+
     // Max pools first, then current starts full. Init* sets the attribute's base
     // value directly (no GameplayEffect, no clamp callback) — right for spawn-time.
     Attributes->InitMaxHealth(Row->MaxHealth);
@@ -268,6 +273,13 @@ bool ABaseCharacter::InitStatsFromRow()
 // DEATH
 // ════════════════════════════════════════════════════════════════════════════
 
+void ABaseCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InPlayerTarget)
+{
+    // Remember the referee so Die() can report deaths immediately. Subclasses that
+    // override this (AEnemyCharacter) MUST call Super::SetupCombat() to keep this.
+    CachedTurnManager = InTurnManager;
+}
+
 void ABaseCharacter::Die()
 // Called by UCRPGAttributeSet::PostGameplayEffectExecute when Health reaches 0.
 // Handles the death sequence: guard check → state flag → animation → cleanup.
@@ -300,8 +312,12 @@ void ABaseCharacter::Die()
     // TODO Session 5 (Animation): Play death montage here.
     // GetMesh()->GetAnimInstance()->Montage_Play(DeathMontage);
 
-    // TODO Session 4 (Turn system): Notify UTurnManager that this character is dead.
-    // TurnManager->OnCharacterDied(this);
+    // Tell the referee someone just died, so it can declare victory/defeat the
+    // moment the killing blow lands — not only when a turn is manually ended.
+    if (CachedTurnManager)
+    {
+        CachedTurnManager->NotifyCombatantDied(this);
+    }
 
     // Log so we can verify the sequence fires correctly during development.
     UE_LOG(LogTemp, Warning,
@@ -362,6 +378,12 @@ float ABaseCharacter::GetXP() const
 
 FText ABaseCharacter::GetUnitName() const
 {
+    // Row's DisplayName is the source of truth; fall back to the Data Asset name,
+    // then the actor name, for characters that have no row.
+    if (!CachedDisplayName.IsEmpty())
+    {
+        return CachedDisplayName;
+    }
     return CharacterData ? CharacterData->CharacterName : FText::FromString(GetName());
 }
 

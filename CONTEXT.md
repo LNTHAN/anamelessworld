@@ -1,12 +1,45 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: side-tasks (mob-pacing + L-minimal) → L
-Block K **core (items #1–#3) DONE**; **click-to-inspect optionals — DONE** (unified 3-slot bottom HUD +
-pinned threat zones + corner-tucked mirrored cards; see section below). Remaining this week:
-- **Two small "this week" tasks still pending:** (a) **mob-pacing fix** (bump mob MoveRange / move mobs
-  closer — demoability, NOT the deferred balance pass); (b) **L-minimal** — wire win/lose screens into
-  the existing `OnCombatEnded_Event` Level BP hook (see LEVELBP.md).
-- Then **L → M → N** per the delivery plan. See [[deadline-coding-final]].
+## ▶ NEXT SESSION: Block L (full cinematic loop) → M → N
+Block K **DONE** (core #1–#3 + click-to-inspect optionals). Both "this week" side-tasks now resolved:
+- **Mob-pacing: decided NO change** — playtest shows mobs reach Nameless in ~2–3 turns at MoveRange 300;
+  kept as-is (the stale 1800-unit log was far mobs, not the demo case). Optional future nudge = *cluster*
+  far mobs for denser Confuse/Intimidate targets (layout tweak, NOT MoveRange). Not blocking.
+- **L-minimal (win/lose result screen): DONE** this session — see the Block L-minimal section below.
+- Next: **Block L full** — FFT-style the result screen (Cinzel/gold/full-width divider), title→subtitle
+  **reveal anim** then slide-up to an **in-world model framing** ("The Hand Unseen" contributor, camera
+  frames Nameless + victory anim, NO SceneCapture), and the real **World-1 ending cutscene** the win-advance
+  stub repoints to. Then **M** (environment art) → **N** (onboarding). See [[deadline-coding-final]].
+
+## Block L-minimal — win/lose result screen — DONE
+Complete-loop *insurance*: combat ends → result screen → back into the game. **Functional pass only**
+(FFT styling + reveal anim + in-world model framing all deferred to Block L full).
+- **Immediate win/lose detection (C++):** `CheckCombatOver()` previously ran ONLY inside `EndTurn`, so a
+  killing blow *mid-turn* (confused mob / shelf crush / boss-fells-Nameless) didn't register until someone
+  clicked End Turn. Fixed: `ABaseCharacter::Die()` now calls new `UTurnManager::NotifyCombatantDied(this)`
+  (placed AFTER `bIsDead=true`, so the referee's headcount sees the fresh corpse) → shared `EndCombat()`
+  helper (extracted from `EndTurn`; sets `GameOver` + resolves winner + broadcasts `OnCombatEnded`). The
+  `GameOver` state makes any in-flight `EndTurn` short-circuit at its top guard, so `OnCombatEnded` fires
+  exactly once. Base `SetupCombat` is no longer a no-op — it caches `CachedTurnManager` for **every**
+  combatant (`AEnemyCharacter`'s override calls `Super::SetupCombat` first). Lose is now immediate too.
+- **`WBP_GameResult`** (Content/UI/) — pure-BP UserWidget. `Show Result(bWon)` sets title/subtitle +
+  branches the UI: **win = no buttons** (ButtonRow → Collapsed) + a "Continue on." prompt, and **LMB or
+  Space advances** (widget `On Mouse Button Down` + `On Key Down` overrides, both gated on a stored
+  `bPlayerWon` bool) → custom event `Advance To Ending` = **STUB** (`Open Level MainMenuLevel`; Block L
+  repoints it to the ending cutscene). **Lose = Retry / Main Menu** buttons (Retry = `Open Level` on
+  `Get Current Level Name`; Menu = `Open Level MainMenuLevel`). `BackgroundDim` Visibility = **Visible**
+  so clicks bubble up to the mouse override.
+- **Level BP `OnCombatEnded_Event`:** hides battle UI FIRST (HUD + Command Menu via their vars; the
+  `WBP_InspectPanel` name-card bar via `Get All Widgets Of Class` → For Each → Set Visibility Collapsed —
+  the nested forecast rides along), THEN Create `WBP_GameResult` → promote to var `Result Screen Widget` →
+  `Show Result(Player Won)` → Add to Viewport → `Set Input Mode UI Only` (focus the widget) → Show Mouse Cursor.
+- **Input-mode carry-over fix (C++):** `Set Input Mode UI Only` lives on the game viewport and **survives
+  `Open Level`** — so Retry reloaded TestLevel still in UI-Only, and the opening dialogue wouldn't advance
+  (LMB never reached the controller). Fixed: `ATacticalPlayerController::BeginPlay` now asserts
+  `FInputModeGameAndUI` (DoNotLock + cursor visible) on every level start, clearing the carry-over.
+- **MVP/contributor deferred:** for now the contributor is always Nameless ("The Hand Unseen"); real
+  per-turn damage-attribution MVP scoring waits for **Phase 2** (needs a party to compare). Showing the
+  model **in-world via camera framing (no SceneCapture)** is Block L full.
 
 ## Block K — clarity & feedback CORE (items #1–#3) — DONE
 Large visual-legibility pass; each item's design was locked with the user, then built. Workflow: Claude

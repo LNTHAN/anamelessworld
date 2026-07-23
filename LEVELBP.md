@@ -7,7 +7,8 @@ TurnManager, HUD widgets, dialogue, and combat start-up are wired together.
 This is the text mirror, so the exec flow can be reasoned about (and reviewed) without opening UE.
 
 **Maintenance:** update whenever the Level BP's *structure* changes (new events, reordered exec,
-added/removed calls) — not for cosmetic node moves. Last verified: **2026-07-16**.
+added/removed calls) — not for cosmetic node moves. Last verified: **2026-07-23** (Chain 4 / combat-end
+path this session; Chains 1–3 not re-checked since 2026-07-16 and may lag Block K's InspectPanel/forecast spawns).
 
 ---
 
@@ -21,6 +22,7 @@ added/removed calls) — not for cosmetic node moves. Last verified: **2026-07-1
 | `Chapter Card Widget` | `WBP_ChapterCard` | BeginPlay |
 | `Battle Commenced Widget` | `WBP_BattleCommenced` | OnDialogueFinished |
 | `Command Menu` | `WBP_CommandMenu` | OnDialogueFinished |
+| `Result Screen Widget` | `WBP_GameResult` | OnCombatEnded_Event |
 
 Actor references come from the Persistent Level: `BP_Player`, `BP_Enemy`, `BP_Boss`
 (the two added mobs need **no** references — see `Register World Combatants`).
@@ -83,13 +85,28 @@ Bind Event to On Combat Ended (Turn Manager) → OnCombatEnded_Event
 
 ---
 
-## Chain 4 — `OnCombatEnded_Event` (Custom Event: Player Won)
+## Chain 4 — `OnCombatEnded_Event` (Custom Event: Player Won) — the result screen
 
 ```
-Branch (Player Won)
-  True  → Print String "Player Won!"    [Development Only]
-  False → Print String "Game Over..."   [Development Only]
+── Hide battle UI ──
+HUD           → Set Visibility (Collapsed)     (turn indicator + turn order strip)
+Command Menu  → Set Visibility (Collapsed)
+Get All Widgets Of Class (WBP_InspectPanel) → For Each Loop
+     Loop Body  → Set Visibility (Array Element = Collapsed)   (name-card bar; nested forecast rides along)
+     Completed  → ↓
+── Show result ──
+Create WBP_GameResult → SET Result Screen Widget
+Show Result (Target = Result Screen Widget, bWon = Player Won)
+Add to Viewport (Result Screen Widget)
+Set Input Mode UI Only (Player Controller = GetPlayerController 0, In Widget to Focus = Result Screen Widget)
+Set Show Mouse Cursor (GetPlayerController 0, true)
 ```
+
+**Win** = no buttons + "Continue on." prompt; **LMB or Space** advances (→ stub `Open Level MainMenuLevel`).
+**Lose** = Retry (reload current level) / Main Menu (`MainMenuLevel`). All the win/lose branching + input
+overrides live inside `WBP_GameResult` (see CONTEXT "Block L-minimal"). Full FFT styling + reveal anim +
+in-world model framing = **Block L full**. Note: `Set Input Mode UI Only` here survives `Open Level`, so
+`ATacticalPlayerController::BeginPlay` reasserts `FInputModeGameAndUI` each level start (Retry-stall fix).
 
 ---
 
@@ -111,7 +128,9 @@ Branch (Player Won)
 
 ## Future touch points
 
-- **Block L** — `OnCombatEnded_Event` is the win/lose hook. Replace the two Print Strings with the real
-  screens (win / lose → "World N … Finished" → Chapter 2 teaser). The plumbing already exists.
+- **Block L (full)** — `OnCombatEnded_Event` now shows `WBP_GameResult` (L-minimal, done). Remaining:
+  FFT-style that widget (Cinzel/gold/divider) + title→subtitle reveal anim + in-world model framing, and
+  repoint the win-advance stub (`Advance To Ending` → `MainMenuLevel`) to the real ending cutscene
+  ("World N … Finished" → Chapter 2 teaser).
 - **Block N** — onboarding will hook the dialogue chain, and needs the *scripted turn order* override
   (Nameless → mobs nearest-first → boss) as an optional mode on `UTurnManager`.

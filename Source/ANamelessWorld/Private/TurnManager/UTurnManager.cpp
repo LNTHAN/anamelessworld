@@ -124,18 +124,7 @@ void UTurnManager::EndTurn()
     // ── Step 3: Check if combat is over ──────────────────────────────────────
     if (CheckCombatOver())
     {
-        CurrentState = ETurnState::GameOver;
-
-        // Was it the player or the enemies who survived?
-        bool bPlayerWon = Combatants.ContainsByPredicate([](const ABaseCharacter* C)
-        {
-            return C && C->IsAlive() && C->IsPlayerCharacter();
-        });
-
-        UE_LOG(LogTemp, Log, TEXT("UTurnManager: Combat over. Player won: %s"),
-            bPlayerWon ? TEXT("YES") : TEXT("NO"));
-
-        OnCombatEnded.Broadcast(bPlayerWon);
+        EndCombat();
         return; // Stop here — no next turn to begin.
     }
 
@@ -144,6 +133,37 @@ void UTurnManager::EndTurn()
 
     // ── Step 5: Begin the next turn ───────────────────────────────────────────
     BeginTurn();
+}
+
+void UTurnManager::EndCombat()
+{
+    CurrentState = ETurnState::GameOver;
+
+    bool bPlayerWon = Combatants.ContainsByPredicate([](const ABaseCharacter* C)
+    {
+        return C && C->IsAlive() && C->IsPlayerCharacter();
+    });
+
+    UE_LOG(LogTemp, Log, TEXT("UTurnManager: Combat over. Player won: %s"),
+        bPlayerWon ? TEXT("YES") : TEXT("NO"));
+
+    OnCombatEnded.Broadcast(bPlayerWon);
+}
+
+void UTurnManager::NotifyCombatantDied(ABaseCharacter* DeadCombatant)
+{
+    // Only meaningful while a fight is actually running.
+    if (CurrentState == ETurnState::WaitingToStart ||
+        CurrentState == ETurnState::GameOver)
+    {
+        return;
+    }
+
+    // If this death emptied one side, end NOW — the instant the blow lands.
+    if (CheckCombatOver())
+    {
+        EndCombat();
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

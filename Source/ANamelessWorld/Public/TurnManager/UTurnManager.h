@@ -157,6 +157,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Turn Manager")
     void StartCombat();
 
+    // Called by ABaseCharacter::Die(). Ends combat immediately if this death
+    // emptied one side — so the result screen appears on the killing blow.
+    void NotifyCombatantDied(ABaseCharacter* DeadCombatant);
+
     /**
      * Signal that the current combatant has finished their action.
      * Call this from APlayerCharacter (after ability resolves) or
@@ -252,6 +256,9 @@ private:
      */
     void BeginTurn();
 
+    // Shared victory/defeat resolution: set GameOver, work out who won, broadcast.
+    void EndCombat();
+    
     /**
      * Check whether combat should end.
      * Combat ends when: all enemies are dead (player wins), OR the player is dead.
