@@ -596,3 +596,13 @@ void ATacticalPlayerController::PlayerTick(float DeltaTime)
     UpdateHoveredEnemy();
     UpdateThreatLines();
 }
+
+void ATacticalPlayerController::FocusOnPlayerForResult()
+{
+    if (!ControlledCharacter) return;
+    if (ATacticalCameraPawn* CameraPawn = Cast<ATacticalCameraPawn>(GetPawn()))
+    {
+        CameraPawn->SetFollowTarget(nullptr);
+        CameraPawn->FocusOn(ControlledCharacter->GetActorLocation() + FVector(0.f, 0.f, 150.f));
+    }
+}

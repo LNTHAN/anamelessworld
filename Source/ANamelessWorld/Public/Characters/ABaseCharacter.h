@@ -85,12 +85,12 @@ public:
 
 
     // ── Death ────────────────────────────────────────────────────────────────
+    
     // Called by UCRPGAttributeSet::PostGameplayEffectExecute when Health hits 0.
     // Plays death animation, disables input, notifies UTurnManager.
     // virtual = APlayerCharacter and AEnemyCharacter can override with specific behaviour.
     UFUNCTION(BlueprintCallable, Category = "ANW|Character")
     virtual void Die();
-
 
     // ── Abilities ────────────────────────────────────────────────────────────
     // Grants every ability in the DefaultAbilities array to the ASC.

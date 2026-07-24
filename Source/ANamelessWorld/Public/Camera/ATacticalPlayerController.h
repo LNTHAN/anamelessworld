@@ -148,6 +148,12 @@ public:
     // very first combatant's turn gets missed.
     UFUNCTION(BlueprintCallable, Category = "ANW|Combat")
     void BindToTurnManager();
+
+    // Eases the camera onto Nameless for the result-screen reveal, called from
+    // WBP_GameResult when the dissolve completes. Clears any follow target so the
+    // walk-trailing logic doesn't fight the focus.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Camera")
+    void FocusOnPlayerForResult();
     
 private:
 

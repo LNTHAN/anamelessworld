@@ -6,10 +6,42 @@ Block K **DONE** (core #1–#3 + click-to-inspect optionals). Both "this week" s
   kept as-is (the stale 1800-unit log was far mobs, not the demo case). Optional future nudge = *cluster*
   far mobs for denser Confuse/Intimidate targets (layout tweak, NOT MoveRange). Not blocking.
 - **L-minimal (win/lose result screen): DONE** this session — see the Block L-minimal section below.
-- Next: **Block L full** — FFT-style the result screen (Cinzel/gold/full-width divider), title→subtitle
-  **reveal anim** then slide-up to an **in-world model framing** ("The Hand Unseen" contributor, camera
-  frames Nameless + victory anim, NO SceneCapture), and the real **World-1 ending cutscene** the win-advance
-  stub repoints to. Then **M** (environment art) → **N** (onboarding). See [[deadline-coding-final]].
+- **Block L — WIN result screen: DONE** this session (see the Block L section below). Design pivoted from
+  triumphant FFT-gold to a **requiem** ("Closing the Page" — the win is a *sad* world-ending, not a triumph).
+- Next in L: **lose-screen contrast pass** + the real **World-1 ending cutscene** (win-advance still stubs
+  to `MainMenuLevel`). Then **M** (environment art) → **N** (onboarding). See [[deadline-coding-final]].
+- **Deferred to the art/polish phase:** the **MVP portrait** (FFT/FEH use a pre-made 2D still, NOT a live
+  render — sidesteps all the greying/SceneCapture/stencil issues + scales to the party of 5). Plan: add
+  `UTexture2D Portrait` to `UCRPGCharacterData` + `GetPortrait()`, one Image in the result screen pulls it,
+  one texture per character. Build it WITH the portrait art, not before. Also strip the K/L debug keys.
+
+## Block L — WIN result screen (requiem, "Closing the Page") — DONE
+Full cinematic pass on the WIN path, built on the L-minimal loop. **Design pivot (locked):** winning ends
+a *world* and is mournful, not triumphant — so NO gold/glow/fanfare; muted crimson, drained world, dust.
+Sequence on win: **killing blow → 2s beat → title fades in → 1.5s hold → title disintegrates into
+ember-dust (left→right) → camera glides to Nameless in the drained world → "The Hand Unseen" fades in →
+"Continue on." fades in.**
+- **Typography:** Cinzel, muted-crimson title `0.60,0.18,0.16`, faded subtitle/contributor/prompt (requiem
+  palette); tapered **`M_Divider`** (procedural UI material — spindle mask to sharp points).
+- **World desaturation:** unbound Post Process Volume (Saturation 0 + vignette), Blend Weight ramped 0→1
+  over a 2s **WorldDrain** Timeline in `OnCombatEnded_Event` (win only). A **Sequence** node splits
+  OnCombatEnded: Then 0 = hide UI + start drain (instant); Then 1 = Delay(2.0) → build result screen.
+- **Disintegration:** **`M_TextDissolve`** (Retainer-Box effect material) — Voronoi noise vs a `Dissolve`
+  scalar erodes the text; **directional** via `Lerp(U, noise, NoiseWeight=0.3)` so it sweeps left→right.
+  Widgets can't use Timelines, so the widget drives `Dissolve` 0→1 in **Event Tick** (bDissolving /
+  DissolveElapsed / DissolveDuration=3.5) → `TitleRetainer→Get Effect Material→Set Scalar "Dissolve"`.
+  `TitleGroup` (title+divider+subtitle) is wrapped in **`TitleRetainer`** (Texture Parameter = "Texture").
+- **Sequencing:** `Show Result` win branch → `PlayVictorySequence` (Delay 1.5 → start dissolve). Tick
+  completion → `OnDissolveComplete`: `FocusOnPlayerForResult` (camera) → reveal ContributorName → Delay(1.0)
+  → reveal ContinuePrompt. ContributorName/ContinuePrompt start **Hidden** (reserve layout space so the
+  reveal doesn't reflow), flipped to Visible. ContributorName has ~180 top padding (text sits below the model).
+- **In-world model framing (no SceneCapture):** `ATacticalPlayerController::FocusOnPlayerForResult()`
+  (BlueprintCallable) eases the camera to `ControlledCharacter` (+150 Z) and clears the follow target;
+  generalizes to any MVP via `FocusOn(MVP)`. Nameless stands hooded in the drained world (victory anim = later).
+- **Debug:** Level BP keys **K** = win (GetAllActorsOfClass `AEnemyCharacter` → `Die`), **L** = lose
+  (`APlayerCharacter` → `Die`). `Die()` is BlueprintCallable. **Strip before final build.**
+- **Deferred:** MVP portrait (art phase — see NEXT), lose-screen contrast pass, real ending cutscene,
+  optional "colour-in-grey-world" (portrait gives it free), hiding floating HP bars in the reveal.
 
 ## Block L-minimal — win/lose result screen — DONE
 Complete-loop *insurance*: combat ends → result screen → back into the game. **Functional pass only**
