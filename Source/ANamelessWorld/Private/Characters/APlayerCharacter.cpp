@@ -151,6 +151,7 @@ bool APlayerCharacter::TryInteract(AInteractableActor* Target)
 
 void APlayerCharacter::SetupCombat(UTurnManager* InTurnManager, ABaseCharacter* InTarget)
 {
+    Super::SetupCombat(InTurnManager, InTarget);  // caches CachedTurnManager → Die() reports instantly
     TurnManager = InTurnManager;
     CurrentTarget = InTarget;
 }

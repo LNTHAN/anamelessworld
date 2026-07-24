@@ -1,15 +1,18 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block L (full cinematic loop) → M → N
+## ▶ NEXT SESSION: Block M (environment / terrain art pass) → N
 Block K **DONE** (core #1–#3 + click-to-inspect optionals). Both "this week" side-tasks now resolved:
 - **Mob-pacing: decided NO change** — playtest shows mobs reach Nameless in ~2–3 turns at MoveRange 300;
   kept as-is (the stale 1800-unit log was far mobs, not the demo case). Optional future nudge = *cluster*
   far mobs for denser Confuse/Intimidate targets (layout tweak, NOT MoveRange). Not blocking.
 - **L-minimal (win/lose result screen): DONE** this session — see the Block L-minimal section below.
-- **Block L — WIN result screen: DONE** this session (see the Block L section below). Design pivoted from
+- **Block L — DONE** (win screen + lose screen + full ending cutscene sequence). Design pivoted from
   triumphant FFT-gold to a **requiem** ("Closing the Page" — the win is a *sad* world-ending, not a triumph).
-- Next in L: **lose-screen contrast pass** + the real **World-1 ending cutscene** (win-advance still stubs
-  to `MainMenuLevel`). Then **M** (environment art) → **N** (onboarding). See [[deadline-coding-final]].
+  The complete cinematic loop now exists end-to-end. See the Block L section below.
+- Next: **M** (environment/terrain art, de-greybox) → **N** (onboarding). See [[deadline-coding-final]].
+  Carry-forward for M's UI pass: reposition the lose-screen Retry/Main Menu buttons; and the deferred
+  **MVP portrait** (data-driven `UTexture2D Portrait` on `UCRPGCharacterData` + `GetPortrait()`, one
+  Image pulls it — FFT/FEH use a pre-made 2D still, not a live render). Also strip the K/L debug keys.
 - **Deferred to the art/polish phase:** the **MVP portrait** (FFT/FEH use a pre-made 2D still, NOT a live
   render — sidesteps all the greying/SceneCapture/stencil issues + scales to the party of 5). Plan: add
   `UTexture2D Portrait` to `UCRPGCharacterData` + `GetPortrait()`, one Image in the result screen pulls it,
@@ -40,8 +43,34 @@ ember-dust (left→right) → camera glides to Nameless in the drained world →
   generalizes to any MVP via `FocusOn(MVP)`. Nameless stands hooded in the drained world (victory anim = later).
 - **Debug:** Level BP keys **K** = win (GetAllActorsOfClass `AEnemyCharacter` → `Die`), **L** = lose
   (`APlayerCharacter` → `Die`). `Die()` is BlueprintCallable. **Strip before final build.**
-- **Deferred:** MVP portrait (art phase — see NEXT), lose-screen contrast pass, real ending cutscene,
-  optional "colour-in-grey-world" (portrait gives it free), hiding floating HP bars in the reveal.
+- **Deferred:** MVP portrait (art phase — see NEXT), optional "colour-in-grey-world" (the portrait gives
+  it free), hiding floating HP bars in the reveal, victory anim on Nameless.
+
+### Lose screen — the requiem's dark twin — DONE
+`Show Result` False branch: world stays COLOURED (WorldDrain is win-gated, so the contrast is free — win =
+dead grey world, lose = the world lives on without you); `BackgroundDim` → 0,0,0,0.75 (darkness pressing
+in, anchored Fill); TitleText → deeper ashen-crimson 0.45,0.14,0.13; "THE PAGE CLOSES / The story ends
+here."; Retry / Main Menu buttons restyled dark-translucent + Cinzel. No dissolve/model (that's the win's
+beat). **Bugfix (same Super bug as the enemy side):** `APlayerCharacter::SetupCombat` didn't call
+`Super::SetupCombat`, so Nameless's `CachedTurnManager` was null → his death only registered at EndTurn
+(lose was delayed on the player's own turn). Fixed by adding the `Super` call.
+
+### Ending cutscene sequence — DONE
+Full loop: **win → "Continue on." → 4 ending slides → WorldFinish → Ch2 intro + "To be continued…" →
+MainMenuLevel.** All chained inside `WBP_GameResult` by reusing existing widgets (no new ones):
+- `Advance To Ending`: Create `WBP_CutsceneScreen` (SlideImages = 4 Ch1-End textures, SlideTexts = 4
+  lines) → store in `EndingCutscene` var → Bind `OnFinished` → `OnEndingSlidesFinished` → Add to Viewport.
+- `OnEndingSlidesFinished`: **re-entry guard** (`bEndingTriggered` bool — Branch, first fire latches it;
+  blocks the double-`OnFinished` that caused a duplicate WorldFinish to flash at the end) → Create
+  `WBP_WorldFinish` → Add → Delay(5.0, = its anim length so the swap lands on black) → Remove WorldFinish →
+  Create tail `WBP_CutsceneScreen` (Ch2 intro + Black slide, "To be continued…") → Bind `OnFinished` →
+  `OnTailSlidesFinished` → Add to Viewport.
+- `OnTailSlidesFinished`: `Open Level MainMenuLevel`.
+- `WBP_WorldFinish`: UMG anim `Sequence` (WORLD 1 opacity 0→1 @0-1s, FINISHED opacity 0→1 @2-3s = the 2s
+  stagger, FadeOverlay black 0→1 @3.5-5s = dim-to-black), played on Event Construct. Rule: the WorldFinish
+  Delay must ≥ the anim length and end on black, so the transition is seamless.
+- Cutscene transition rule (learned): the 4-slide `WBP_CutsceneScreen` is never removed and its auto-advance
+  can re-fire `OnFinished` → the guard (and optional Remove-EndingCutscene) handles that.
 
 ## Block L-minimal — win/lose result screen — DONE
 Complete-loop *insurance*: combat ends → result screen → back into the game. **Functional pass only**
