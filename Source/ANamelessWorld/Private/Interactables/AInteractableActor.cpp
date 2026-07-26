@@ -64,13 +64,15 @@ void AInteractableActor::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
 
-    // Lift the mesh so its base sits on the Pivot. Done here (not BeginPlay) so it
-    // shows in the EDITOR too — placement becomes WYSIWYG.
+
     if (Mesh && Mesh->GetStaticMesh())
     {
-        const float HalfHeight =
-            Mesh->GetStaticMesh()->GetBounds().BoxExtent.Z * Mesh->GetComponentScale().Z;
-        Mesh->SetRelativeLocation(FVector(0.f, 0.f, HalfHeight));
+        // Put the mesh's BASE on the Pivot, whatever the art's pivot is
+        // (center-pivot cube OR base-pivot bookcase). Bottom of the bounds in
+        // local space = Origin.Z - BoxExtent.Z; lift by its negative to reach 0.
+        const FBoxSphereBounds B = Mesh->GetStaticMesh()->GetBounds();
+        const float BaseOffsetZ = (B.BoxExtent.Z - B.Origin.Z) * Mesh->GetComponentScale().Z;
+        Mesh->SetRelativeLocation(FVector(0.f, 0.f, BaseOffsetZ));
     }
 }
 
@@ -129,10 +131,14 @@ void AInteractableActor::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedCom
 
 FVector AInteractableActor::GetBlastHalfExtents() const
 {
-    // Shelf's own half-size (accounting for its scale).
-    FVector Half = (Mesh && Mesh->GetStaticMesh())
-        ? Mesh->GetStaticMesh()->GetBounds().BoxExtent * Mesh->GetComponentScale()
-        : FVector(50.f, 50.f, 100.f);
+    // Mesh's own half-size, rotated by its relative yaw into the actor frame —
+    // so a 90°-turned bookcase mesh still maps width/depth to the right actor axes.
+    FVector Half(50.f, 50.f, 100.f);
+    if (Mesh && Mesh->GetStaticMesh())
+    {
+        const FVector Local = Mesh->GetStaticMesh()->GetBounds().BoxExtent * Mesh->GetComponentScale();
+        Half = Mesh->GetRelativeRotation().RotateVector(Local).GetAbs();
+    }
 
     // Expand the SHORTER horizontal axis (the front/back topple direction).
     if (Half.X <= Half.Y) Half.X += ToppleReach;

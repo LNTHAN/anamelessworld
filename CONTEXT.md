@@ -1,6 +1,104 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block M (environment / terrain art pass) → N
+## ▶ NEXT SESSION: Block M part 2 (dressing + final lighting balance) → N
+Block M part 1 **DONE** — the library is fully de-greyboxed (floor, walls, aisle bookcases, rigged
+bookshelf, candles/banners, textures). Pick up at **shelf dressing** then the **final lighting pass**.
+See the Block M section below for the full state, the two C++ fixes, and the asset-pipeline lesson.
+
+## Block M — environment de-greybox — PART 1 DONE
+Greybox → real library. Asset stack (locked, all free): **KayKit Dungeon Pack** (itch.io, CC0) = room
+shell + banners + props; **"Stylized Library — 48 Cozy Interior Props"** (Daria Borovleva, Fab) =
+bookcases/books/scrolls. Characters are flat polyart, so a realistic pack (CobraGames) was rejected as
+the base — style match to the characters drove the choice. Mood worry ("KayKit is too upbeat for a dark
+game") resolved by the rule **style = mesh, mood = lighting**.
+
+### Geometry (all built on KayKit's 400-unit grid)
+- **Floor** — 5×5 grid of `floor_tile_large` (400×400×15), X/Y at −800/−400/0/+400/+800, **Z = −2**
+  (eyeballed flush; the pivot is not a clean base pivot). Old greybox Plane deleted.
+- **Walls** — wall piece is 400×100×400. Perimeter **centered on the floor-edge line at ±1000**, not
+  ±1050 (at 1050 they hang over the void). All **Z = 0**; N/S at Yaw 0, E/W at Yaw 90; 5 segments a side.
+  Corners overlap deliberately (reads solid). One segment omitted near Nameless = the doorway.
+- **Aisle shelves** — each old white cube (e.g. Scale `0.3, 8, 2` = 30×800×200) replaced by a row of
+  flat bookcases (188×92×250). Recipe: **count = big-scale ÷ 2**, spacing **190** (touching, no gaps),
+  **Z = 5**, Yaw so the 188 width follows the shelf's long axis. Rows reduced 5 → **4** (less cramped).
+  Bookcases are 92 deep vs the cubes' 30, so aisles tightened — navmesh rebuilt, AI pathing verified OK.
+
+### `BP_RiggedBookshelf` — mesh swap + 3 fixes
+Single bookcase per rigged shelf (not a toppling wall). Multiple rigged shelves are now spread across
+different rows; each one's **+X (red arrow) must point at its intended kill zone** (front faces the fall).
+- **Mesh Yaw = 90** — puts the bookcase front on the Pivot's **X** (the fall axis). Yaw 0/180 would tip
+  it sideways onto its edge. Confirmed by playtest, not by the mesh gizmo (the mesh's own green arrow
+  always points out its front, so it can never "face" its own red — judge against the **Pivot's** frame).
+- **C++ fix 1 — `AInteractableActor::OnConstruction`** lifted the mesh by `BoxExtent.Z` (written for the
+  centre-pivot cube). With a base-pivot bookcase that shoved it ~135 up and **re-applied every
+  construction**, so a hand-set Z=0 kept snapping back to 135. Now computes `BaseOffsetZ =
+  (BoxExtent.Z − Origin.Z) * Scale.Z`, which grounds **either** pivot type.
+- **C++ fix 2 — `GetBlastHalfExtents()`** sized the blast rectangle from the mesh's **un-rotated** bounds,
+  so the Mesh Yaw 90 left the damage zone turned 90° from the visible shelf (damage landed sideways).
+  Now rotates the bounds by `Mesh->GetRelativeRotation()` into the actor frame first.
+- **BP fix — placement-aware topple.** The Topple wrote `Set Relative Rotation` on the **root**, so every
+  shelf snapped to the same world direction regardless of placement. Now: new **`InitialRotation`**
+  (Rotator) ← **Get Actor Rotation** on `Event OnDetonated` (before Timeline Play); **Lerp A** =
+  InitialRotation, **Lerp B** = **Combine Rotators**(A = Make Rotator Pitch 90, B = InitialRotation).
+  Combine applies the pitch **locally**, so each shelf falls along its own facing. Yaw-0 shelves resolve
+  to the old (0,0,0)→(0,90,0), so nothing already-working changed.
+  *(Gotcha hit en route: the `SET InitialRotation` was first wired from its own getter — a self-assign
+  that captured nothing. Must be fed by **Get Actor Rotation**.)*
+- **TriggerSphere** reset to Absolute Scale **1,1,1** (it had inherited the long cube's `0.3,5,2`, making
+  a stretched ellipsoid). Note the sphere is only a secondary trip-wire — `CheckProximity`/`Detonate`
+  both use the mesh-derived `IsInBlastZone()` rectangle.
+
+### ⚠ Asset-pipeline lesson (cost most of the session)
+**Fab's "Download only → fbx" ships meshes with NO textures.** The 48-FBX download was 4 MB and every
+auto-generated material (`MF_PhongToMetalRoughness` chain) pointed at **`DefaultTexture`** → the whole
+room rendered grey-green. This is NOT a lighting or tint problem — check `DiffuseColorMap`'s texture
+before touching anything else. The pack's real materials live in its **UE-project** version, which was
+blocked by a **5.7 vs 5.6** version mismatch (that's also why the FBX route was taken).
+- **Fix:** downloaded the **Unity `.unitypackage`** (99 MB) and extracted its textures. A `.unitypackage`
+  is a **gzipped tar** of GUID folders each holding `asset` + `pathname`; a plain `tar -xf` gives useless
+  GUID names, so the extractor reads each `pathname` to restore real filenames. 69 textures (23 sets).
+- **Unity → UE naming:** `_AlbedoTransparency` = **Base Color** (renamed to `_BaseColor` on disk);
+  `_Normal` = Normal; **`_MetallicSmoothness` is IGNORED** — Unity stores *smoothness*, UE wants
+  *roughness* (inverted), so plugging it in makes matte wood look like plastic. Use a **Constant 0.9
+  Roughness** instead (which doubles as the planned PBR-glint fix).
+- **KayKit was fine** — its single gradient atlas `dungeon_texture` imported with the meshes; its
+  material just needed that texture dropped into `DiffuseColorMap`. One connection coloured all 200
+  assets, because KayKit meshes' UVs point at **swatches** on one 1024² colour chart.
+- **KayKit stone is genuinely grey** — no hidden colour to unlock, and all KayKit meshes share ONE
+  material so walls can't be tinted separately. Colour comes from banners / candlelight / books instead.
+
+### Lighting (base pass done, final balance pending)
+Directional Light **0.5 lux** cool `0.62,0.71,1.0,1.0`; Skylight **0.15** deep blue `0.05,0.07,0.13,1.0`;
+**5 point lights** warm `1.0,0.65,0.30,1.0`, ~20 cd, atten 700, **Z≈280** (flame height), each sat on a
+candle mesh on a shelf top = **motivated lighting**, and each placed **beside a rigged shelf** so light
+also flags the interactables. **Exponential Height Fog was tried and DELETED** — it's a distance-based
+outdoor tool; in a closed 20 m room it only tinted the skybox.
+- **Battle grade lives on a SECOND PP volume (`PostProcessVolume2`, Priority 0, Unbound)** — the original
+  `PostProcessVolume` is Block L's **WorldDrain** (Blend Weight 0→1 on win) and must stay **higher
+  priority**, or the win-screen desaturation gets outvoted. Settings kept **mild** (Saturation ~0.65,
+  Contrast 1.1, Vignette 0.5, Bloom 0.6): a hard desaturation was tried and rejected because **the battle
+  world must keep colour for the win screen to drain it away** — that's the whole emotional beat.
+
+### Remaining for Block M part 2
+1. **Shelf dressing** — books/scrolls are placed on only a few shelves. Rule used: **dress what the
+   camera sees** (lit shelves + rigged shelves + a few on the floor), NOT all ~40 bookcases. One good
+   cluster then Ctrl+W-duplicate with slight rotation variance. `PropsSet*` materials still need their
+   `_BaseColor`/`_Normal` wired (same 2-node swap).
+2. **Final lighting balance** — the room got much BRIGHTER once real textures landed (pale textures
+   bounce more than the grey placeholders), so contrast washed out. Re-judge Skylight + PP grade against
+   the finished content, in **PIE** (post-processing differs from the editor viewport).
+3. **Banners read as wallpaper** — same variant, same height, near-even spacing. Remove ~⅓, vary Z ±20–30
+   and yaw, mix in other `banner_pattern*` variants, cluster near the door/lit areas.
+4. **Cleanup** — delete `Content/Environment/Library/VaultCache/` (99 MB Unity package downloaded INTO
+   Content; must not be committed). Consider splitting `Environment/Library/` into `KayKit/` +
+   `LibraryProps/` (both packs share that one folder) — but moving assets breaks placed-actor refs, so
+   only do it deliberately. Optionally drop the 23 unused `_MetallicSmoothness` textures.
+5. Carry-forward from L: reposition lose-screen Retry/Main Menu buttons; strip the K/L debug keys.
+
+**Rigged-shelf "tell" — SOLVED, diegetic:** each rigged bookshelf has an **open book** on it (plus the
+candle beside it). No UI marker needed; it reads as "someone was working here." Fairness problem closed.
+
+## Block K → L history
 Block K **DONE** (core #1–#3 + click-to-inspect optionals). Both "this week" side-tasks now resolved:
 - **Mob-pacing: decided NO change** — playtest shows mobs reach Nameless in ~2–3 turns at MoveRange 300;
   kept as-is (the stale 1800-unit log was far mobs, not the demo case). Optional future nudge = *cluster*
