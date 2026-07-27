@@ -1,9 +1,42 @@
 # ANamelessWorld — Session Context
 
-## ▶ NEXT SESSION: Block M part 2 (dressing + final lighting balance) → N
-Block M part 1 **DONE** — the library is fully de-greyboxed (floor, walls, aisle bookcases, rigged
-bookshelf, candles/banners, textures). Pick up at **shelf dressing** then the **final lighting pass**.
-See the Block M section below for the full state, the two C++ fixes, and the asset-pipeline lesson.
+## ▶ NEXT SESSION: UI theme pass (then SFX/VFX juice)
+**Block M is DONE** (parts 1 + 2) — the library is de-greyboxed, dressed, banner-varied and lit.
+Pick up at the **whole-game UI theme pass**: propagate the locked requiem palette from `WBP_GameResult`
+(Cinzel, muted crimson `0.60,0.18,0.16`, faded parchment, `M_Divider`) into the battle UI, which does
+not yet look like it belongs to the same game as its own ending screens. Current offenders visible in
+PIE: **magenta "Player Turn"** indicator, default-grey `WBP_CommandMenu` buttons, blue/green
+`WBP_UnitCard`. Scope + cut list are in the schedule-revision note below.
+*(Keep a pre-pass PIE screenshot as the "before" for the presentation slides.)*
+
+### ⚑ Schedule revision (2026-07-27) — Block N CUT, build work ends July
+L landed a week early, so the calendar was rewritten (see ROADMAP "REVISION 2026-07-27"):
+- **Block N (onboarding) is CUT** — the final is a **narrated live demo**; the grader is walked through
+  the manipulation loop in person and never plays it, so in-game teaching has no audience. The scripted
+  turn-order override on `UTurnManager` is cut with it. Returns in Phase 2 / any public build.
+- **Jul 27–31 = M part 2 → UI theme pass → SFX/VFX juice pass**, in that order.
+  - The **whole-game UI theme pass** was Block K's deferred item and had fallen out of the schedule
+    entirely (caught 2026-07-27). It goes BEFORE juice — the UI is in every frame of the showcase video.
+    Scope = *propagate* the already-locked requiem palette from `WBP_GameResult` (Cinzel, muted crimson
+    `0.60,0.18,0.16`, faded parchment, `M_Divider`) into `WBP_BattleHUD` / `WBP_CommandMenu` /
+    `WBP_UnitCard` / `WBP_TurnOrderStrip` / `WBP_DialogueBox`, + the deferred ~5px arrow/card alignment
+    + the lose-screen button reposition. NOT a new design — the battle UI just doesn't match its own
+    ending screens yet. **Status icons over units: CUT** (the yellow threat-line already reads as
+    "confused", and the narrator says it aloud).
+  - Juice = *sourced* audio + Niagara into hooks that already fire (`OnDetonated`, `OnTelegraph`,
+    `PlayHitReact`, `TriggerShake`).
+  - **Phase 1 build work targets DONE by end of July** (~7–9 sessions vs ~10 available = no slack; a
+    slip to Aug 1–2 is fine, a rushed theme pass is not). Hard-stop M: dressing and lighting have no
+    natural stopping point and are the only realistic way this slips.
+- **Aug 1–15 = deliverables** (showcase video, docs, presentation slides) + optional balance-lite
+  (Block O) + buffer. No new features.
+- **Debug keys: do NOT strip yet.** Level-BP **K** (instant win) / **L** (instant lose) are how the
+  ending chain and both result screens get filmed without replaying a battle per take. Strip them
+  **after video capture, before the final build** — this supersedes the "strip before final build"
+  note in the Block L section below.
+- **Doc debt:** `LEVELBP.md` is stale — it documents L-minimal but not the full Block L ending chain
+  (`Advance To Ending` → slides → WorldFinish → tail) or the K/L debug keys. Update before the docs
+  deliverable, since it's the text mirror a grader-facing writeup would draw from.
 
 ## Block M — environment de-greybox — PART 1 DONE
 Greybox → real library. Asset stack (locked, all free): **KayKit Dungeon Pack** (itch.io, CC0) = room
@@ -73,27 +106,64 @@ Directional Light **0.5 lux** cool `0.62,0.71,1.0,1.0`; Skylight **0.15** deep b
 candle mesh on a shelf top = **motivated lighting**, and each placed **beside a rigged shelf** so light
 also flags the interactables. **Exponential Height Fog was tried and DELETED** — it's a distance-based
 outdoor tool; in a closed 20 m room it only tinted the skybox.
-- **Battle grade lives on a SECOND PP volume (`PostProcessVolume2`, Priority 0, Unbound)** — the original
-  `PostProcessVolume` is Block L's **WorldDrain** (Blend Weight 0→1 on win) and must stay **higher
-  priority**, or the win-screen desaturation gets outvoted. Settings kept **mild** (Saturation ~0.65,
-  Contrast 1.1, Vignette 0.5, Bloom 0.6): a hard desaturation was tried and rejected because **the battle
-  world must keep colour for the win screen to drain it away** — that's the whole emotional beat.
+- **`PostProcessVolume2` was DELETED (part 2).** The battle grade now lives on the **Camera component of
+  `BP_TacticalCameraRig`** (Details → Post Process). Better home: there is exactly one camera, so a
+  camera-attached grade always applies and can never be outvoted by volume priority. Currently only
+  **Bloom Intensity 0.35 / Threshold 1.0** is set there. The surviving `PostProcessVolume` is Block L's
+  **WorldDrain** (Blend Weight 0→1 on win) — **never put battle-grade settings on it**: it sits at Blend
+  Weight 0 for the whole fight, so anything set there is invisible until the win ramp.
+- Standing rule regardless of where the grade lives: **the battle world must keep colour so the win
+  screen can drain it away** — that's the emotional beat. A hard desaturation was tried and rejected.
 
-### Remaining for Block M part 2
-1. **Shelf dressing** — books/scrolls are placed on only a few shelves. Rule used: **dress what the
-   camera sees** (lit shelves + rigged shelves + a few on the floor), NOT all ~40 bookcases. One good
-   cluster then Ctrl+W-duplicate with slight rotation variance. `PropsSet*` materials still need their
-   `_BaseColor`/`_Normal` wired (same 2-node swap).
-2. **Final lighting balance** — the room got much BRIGHTER once real textures landed (pale textures
-   bounce more than the grey placeholders), so contrast washed out. Re-judge Skylight + PP grade against
-   the finished content, in **PIE** (post-processing differs from the editor viewport).
-3. **Banners read as wallpaper** — same variant, same height, near-even spacing. Remove ~⅓, vary Z ±20–30
-   and yaw, mix in other `banner_pattern*` variants, cluster near the door/lit areas.
-4. **Cleanup** — delete `Content/Environment/Library/VaultCache/` (99 MB Unity package downloaded INTO
-   Content; must not be committed). Consider splitting `Environment/Library/` into `KayKit/` +
-   `LibraryProps/` (both packs share that one folder) — but moving assets breaks placed-actor refs, so
-   only do it deliberately. Optionally drop the 23 unused `_MetallicSmoothness` textures.
-5. Carry-forward from L: reposition lose-screen Retry/Main Menu buttons; strip the K/L debug keys.
+### Block M part 2 — DONE (2026-07-27)
+1. **Prop materials wired** — the whole dressing set is gated by only **4** materials, not all 22:
+   `SM_Book_01–04`→**M_PropsSetO**, `SM_Book_05–08`→**M_PropsSetP**, `SM_Scroll_01–07`→**M_PropsSetE**,
+   `SM_Stack`→**M_PropsSetF**. (User wired all of A–P anyway.) Same 2-node swap as the bookcase:
+   `_BaseColor` → Base Color, `_Normal` → Normal, **Constant 0.9 → Roughness**, ignore `_MetallicSmoothness`.
+2. **Shelf dressing — one cluster built + tell-books on all 5 rigged shelves.** Rule: **dress what the
+   camera sees** (lit + rigged + camera-facing), NOT all ~40 bookcases. At the ~45° tactical angle only
+   the **top surface and top board** read — lower boards are occluded by the shelf in front, so dress
+   tops. Jitter Yaw ±15°, Pitch 8–12° on a leaner: breaking the straight top edge is 90% of the effect.
+   **More books deliberately deferred** to after UI+VFX (additive, not blocking).
+3. **Tell-books attached to the rigged shelves** — Outliner **drag the book row onto the
+   `BP_RiggedBookshelf` row** (drop *on* it, not between rows; world transform is preserved
+   automatically — there is no "Keep World Transform" dialog on this path). Attaching to an actor binds
+   to its **root component**, which on `AInteractableActor` **is the `Pivot`** — the exact component the
+   Topple rotates — so the book falls with the shelf for free. **Gotcha: a Static-mobility actor cannot
+   be attached to a Movable one** (Static gets baked into precomputed lighting). Set each tell-book to
+   **Movable** first; leave ordinary decorative books **Static** (cheaper, better baked lighting).
+   Tell-books also need **Collision = NoCollision** or they jitter on the falling shelf.
+4. **Banners de-wallpapered** — ~⅓ removed, kept near the doorway/lit areas; **palette narrowed to
+   red + brown** (the banners ARE this level's colour, since KayKit stone is grey and untintable — and
+   red/brown pre-echoes the requiem crimson `0.60,0.18,0.16` of the ending screens); pattern variants
+   mixed (multi-select actors → Details → Static Mesh dropdown swaps them all at once); Z varied ±20–30
+   and a **Roll of ±2–4°** (roll, not yaw — yaw swings them off the wall plane).
+5. **Lighting balanced.** Concept that drove it: the room looked washed not because it was *bright* but
+   because everything sat at a *similar* brightness — so cut the ambient fill and let the candles get
+   **stronger**, not weaker. Pale KayKit stone throws far more bounce than the grey greybox did, and the
+   walls can't be darkened directly (one shared material), so they're darkened by receiving less light.
+   `r.DynamicGlobalIlluminationMethod=1` → **Lumen**, so bounce is dynamic: no lighting build, changes
+   are live, no Lightmass settings involved. Auto-exposure is already **off** project-wide
+   (`r.DefaultFeature.AutoExposure=False`), so it was never the culprit. Levers: Skylight down,
+   Directional down, per-light/PP **Indirect Lighting Intensity**, then **Bloom 0.35 / Threshold 1.0**
+   on the camera (Threshold controls *which* pixels bloom; Intensity how hard).
+6. **Cleanup** — `VaultCache/` already gone. Still optional: drop the 23 unused `_MetallicSmoothness`
+   textures; splitting `Environment/Library/` into `KayKit/` + `LibraryProps/` is NOT worth it (moving
+   assets breaks placed-actor refs). `PropsSetH.uasset` is missing its `M_` prefix — cosmetic.
+
+### ⚠ Two viewport lessons (cost a full tuning round-trip)
+- **Post-process on a CAMERA COMPONENT does not affect the editor viewport** — the viewport renders
+  through its own camera. Bloom/grade changes look like no-ops until you hit **PIE**. Judge every
+  look-change in PIE, at the actual tactical angle.
+- **Press `G` (Game View) before judging anything.** It hides editor-only sprites. The "candles are
+  blowing out" diagnosis was wrong — most of those white blobs were **point-light bulb icons**, not
+  bloom. In PIE the higher bloom (0.35/1.0) is the better look: the halo is what makes flames read as
+  living light. Also: **every PP property is ignored until its checkbox is ticked**, and Color Grading
+  values are 4-channel (R/G/B/**Y**) — set **Y**, the luminance/master channel, not RGB.
+
+### Carry-forward (not M's job)
+- Lose-screen Retry/Main Menu reposition → folded into the **UI theme pass**.
+- **K/L debug keys stay in until after video capture** (see the schedule-revision note at the top).
 
 **Rigged-shelf "tell" — SOLVED, diegetic:** each rigged bookshelf has an **open book** on it (plus the
 candle beside it). No UI marker needed; it reads as "someone was working here." Fairness problem closed.

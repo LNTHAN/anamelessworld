@@ -39,10 +39,41 @@ Confuse range) are DONE — only its balance pass is deferred.
   on top of L-minimal). Cheap — the `OnCombatEnded_Event` hook already exists.
 - **Aug 4–8 — Block M (environment art / de-greybox):** sourced meshes+materials (Synty/Fab; source,
   don't create). **TIMEBOXED — the one real rabbit hole; deliberately AFTER L so it can't swallow the ending.**
-- **Aug 9–12 — Block N (onboarding):** teach the manipulation loop; scripted turn order override.
-- **Aug 13–15 — buffer:** playtest / bug-fix, no new features.
+  *(Pulled forward — part 1 done Jul 26, part 2 running Jul 27.)*
+
+### REVISION 2026-07-27 — N cut, build work compressed to end of July
+L landed a full week early, so the back half of the calendar is rewritten:
+- **Jul 27–31 — M part 2 → UI theme pass → juice pass** (in that order):
+  1. ~~**M part 2**~~ — **✓ DONE 2026-07-27** (prop materials, shelf dressing + attached tell-books,
+     banner variance, lighting balance). Extra book dressing deliberately deferred to after UI+VFX.
+  2. **Whole-game UI theme pass** (~2 sessions) — Block K's deferred item, previously unscheduled.
+     Sequenced BEFORE juice: the UI is in every frame of the showcase video, a VFX burst is on screen for
+     half a second. **Scopeable because the design language already exists** — `WBP_GameResult` has the
+     locked requiem palette (Cinzel, muted crimson `0.60,0.18,0.16`, faded parchment, `M_Divider`); this
+     pass *propagates* it into the battle UI, which currently doesn't match its own ending screens.
+     Finish line: does the HUD look like it belongs to the same game as the result screen?
+     - Palette + font onto `WBP_BattleHUD`, `WBP_CommandMenu`, `WBP_UnitCard`, `WBP_TurnOrderStrip`,
+       `WBP_DialogueBox`; the deferred ~5px arrow/card height alignment; lose-screen button reposition.
+     - **Status icons over units: CUT** — the yellow threat-line already reads as "confused", and a
+       narrated demo says it out loud. Redundant.
+  3. **SFX/VFX juice pass** — *sourced* audio + Niagara wired into hooks that already fire
+     (`OnDetonated`, `OnTelegraph`, `PlayHitReact`, `TriggerShake`). A silent demo reads as unfinished
+     faster than anything else, and this is wiring, not authoring.
+  **Target: Phase 1 build work COMPLETE by end of July** — ~7–9 sessions against ~10 available, so it
+  fits with zero slack. A slip to Aug 1–2 is acceptable (the deliverable window has room); a rushed theme
+  pass is not. **Trim levers in order:** status icons (already cut) → dressing scope → VFX count.
+- **Block N (onboarding) — CUT.** The final is a **narrated live demo** — the grader is walked through
+  the manipulation loop in person, never handed the controller — so in-game teaching has no audience.
+  The scripted turn-order override on `UTurnManager` is cut with it. Revisit in Phase 2, when the game
+  is actually put in a player's hands.
+- **Aug 1–15 — deliverables + buffer:** showcase video, written docs, presentation slides. Then
+  balance-lite (Block O, optional) and playtest/bug-fix. **No new features.**
+  - **Capture order matters:** the Level-BP debug keys (**K** = instant win, **L** = instant lose) stay
+    in until the video is shot — they're how you film the ending chain and both result screens without
+    replaying a battle per take. **Strip them after capture, before the final build.**
 - **Block O (deferred): balance pass + H2 progression** — only if buffer allows; else cut (grader doesn't
-  weight balance). See CONTEXT for the concrete balance targets already captured.
+  weight balance). See CONTEXT for the concrete balance targets already captured. H2 progression is the
+  first thing to drop: XP/leveling is invisible work in a single-battle demo.
 - **Cut order if slipping:** Block O (already deferred) → full M art (keep a light version) → Tier-2 danger overlays.
 - **Order note:** L precedes M (the complete-loop signal is secured before the art rabbit hole); L-minimal is
   still wired early in the K week as insurance.
@@ -112,9 +143,12 @@ values, MoveRanges, `ConfuseCastRange`, mob pacing, and the flat-vs-data env-dam
 targets in CONTEXT); **(2) H2 progression** — XP/mid-battle leveling/Mana (see the H2 detail block above).
 Do only if time remains after N; a rough-but-complete demo beats a balanced-but-unfinished one for the grade.
 
-### Block N — Onboarding
-Teach the manipulation loop. **Last mechanics block** — only once mechanics are frozen.
-- **Scripted turn order (tutorial override):** the Ch1 tutorial battle needs a *fixed* order — Nameless → the 3 mobs (nearest-to-Nameless first) → boss last — so onboarding can walk Movement → Confuse → Intimidate as a controlled beat. Build as an optional "scripted order" mode on `UTurnManager` that bypasses the DEX+d20 initiative roll for this encounter only; **initiative stays the default for all real battles.** Layout is already pre-positioned for this (2 mobs mid-field near Nameless for Intimidate/Confuse teaching, 1 mob by the boss).
+### Block N — Onboarding — ✗ CUT (2026-07-27), deferred to Phase 2
+Cut because the coding-final is delivered as a **narrated live demo**: the grader watches and is talked
+through the manipulation loop, and never plays it themselves. In-game teaching therefore has no audience
+to teach. Nothing here is lost work — it's unstarted, and it becomes necessary the moment the game goes
+in front of a player who has no narrator (Phase 2, or any public build).
+- **Scripted turn order (tutorial override) — cut with the block:** a *fixed* order (Nameless → the 3 mobs, nearest-first → boss last) so onboarding could walk Movement → Confuse → Intimidate as a controlled beat. Design intent, if rebuilt: an optional "scripted order" mode on `UTurnManager` bypassing the DEX+d20 roll for that encounter only; **initiative stays the default for all real battles.** The layout is already pre-positioned for it (2 mobs mid-field near Nameless, 1 by the boss), so the groundwork survives the cut.
 
 ---
 
