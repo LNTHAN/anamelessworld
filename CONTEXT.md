@@ -5,8 +5,11 @@
 Pick up at the **whole-game UI theme pass**: propagate the locked requiem palette from `WBP_GameResult`
 (Cinzel, muted crimson `0.60,0.18,0.16`, faded parchment, `M_Divider`) into the battle UI, which does
 not yet look like it belongs to the same game as its own ending screens. Current offenders visible in
-PIE: **magenta "Player Turn"** indicator, default-grey `WBP_CommandMenu` buttons, blue/green
-`WBP_UnitCard`. Scope + cut list are in the schedule-revision note below.
+PIE: **magenta "Player Turn"** indicator, the **greyish `WBP_TurnOrderStrip`** sitting right below it
+(default slate grey — reads as placeholder UI, and it's in the top-centre of every frame), default-grey
+`WBP_CommandMenu` buttons, blue/green `WBP_UnitCard`. Scope + cut list are in the schedule-revision
+note below. The environment is already on-palette (warm candle pools, dark corners, red banners as the
+only saturated colour) — so this pass matches the UI **to the room**, not the two to each other.
 *(Keep a pre-pass PIE screenshot as the "before" for the presentation slides.)*
 
 ### ⚑ Schedule revision (2026-07-27) — Block N CUT, build work ends July
