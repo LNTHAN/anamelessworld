@@ -5,6 +5,8 @@
 #include "UDialogueWidget.generated.h"
 
 class UTextBlock;
+class UImage;
+class UTexture2D;
 
 UCLASS(Abstract, BlueprintType, Blueprintable)
 class ANAMELESSWORLD_API UDialogueWidget : public UUserWidget
@@ -13,7 +15,7 @@ class ANAMELESSWORLD_API UDialogueWidget : public UUserWidget
 
 public:
     UFUNCTION(BlueprintCallable, Category = "ANW|Dialogue")
-    void ShowLine(const FText& SpeakerName, const FText& LineText);
+    void ShowLine(const FText& SpeakerName, const FText& LineText, UTexture2D* SpeakerPortrait = nullptr);
 
     UFUNCTION(BlueprintCallable, Category = "ANW|Dialogue")
     void HideDialogue();
@@ -26,4 +28,8 @@ protected:
     // In WBP_DialogueBox, create a TextBlock with this exact name.
     UPROPERTY(meta = (BindWidget), BlueprintReadOnly)
     UTextBlock* DialogueLineText;
+
+    // In WBP_DialogueBox, create an Image with this exact name.
+    UPROPERTY(meta = (BindWidget), BlueprintReadOnly)
+    UImage* SpeakerPortraitImage;
 };

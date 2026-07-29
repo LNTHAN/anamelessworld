@@ -387,6 +387,11 @@ FText ABaseCharacter::GetUnitName() const
     return CharacterData ? CharacterData->CharacterName : FText::FromString(GetName());
 }
 
+UTexture2D* ABaseCharacter::GetPortrait() const
+{
+    return CharacterData ? CharacterData->Portrait : nullptr;
+}
+
 float ABaseCharacter::GetDexterity() const
 {
     // Guard: Attributes should always exist after the constructor runs,

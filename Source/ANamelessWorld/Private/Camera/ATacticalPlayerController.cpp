@@ -606,3 +606,13 @@ void ATacticalPlayerController::FocusOnPlayerForResult()
         CameraPawn->FocusOn(ControlledCharacter->GetActorLocation() + FVector(0.f, 0.f, 150.f));
     }
 }
+
+void ATacticalPlayerController::FocusOnUnit(ABaseCharacter* Unit)
+{
+    if (!Unit) return;
+    if (ATacticalCameraPawn* CameraPawn = Cast<ATacticalCameraPawn>(GetPawn()))
+    {
+        CameraPawn->SetFollowTarget(nullptr);
+        CameraPawn->FocusOn(Unit->GetActorLocation() + FVector(0.f, 0.f, 150.f));
+    }
+}

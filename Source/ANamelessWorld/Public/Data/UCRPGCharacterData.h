@@ -13,6 +13,7 @@
 
 class UGameplayAbility;
 class UGameplayEffect;
+class UTexture2D;
 
 UCLASS(BlueprintType)
 class ANAMELESSWORLD_API UCRPGCharacterData : public UPrimaryDataAsset
@@ -24,6 +25,11 @@ public:
     // Display name shown in UI ("Aria", "Goblin", "Dark Golem")
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Identity")
     FText CharacterName;
+
+    // 2D portrait shown on unit cards, the dialogue box and turn-order slots.
+    // Rendered from the character's own model so the face matches what's on the field.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|Identity")
+    UTexture2D* Portrait = nullptr;
 
     // GameplayEffect that sets starting attribute values (Health, Mana, STR, etc.)
     // Replaces ABaseCharacter::DefaultAttributeEffect

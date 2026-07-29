@@ -154,6 +154,12 @@ public:
     // walk-trailing logic doesn't fight the focus.
     UFUNCTION(BlueprintCallable, Category = "ANW|Camera")
     void FocusOnPlayerForResult();
+
+    // Eases the camera onto any unit. Used by the turn-order strip: clicking a
+    // slot jumps the view to that combatant. Clears the follow target so the
+    // walk-trailing logic doesn't drag the camera back off them.
+    UFUNCTION(BlueprintCallable, Category = "ANW|Camera")
+    void FocusOnUnit(ABaseCharacter* Unit);
     
 private:
 
@@ -169,6 +175,7 @@ private:
 
     // Click-to-inspect: pin a unit's card (+ an enemy's threat zone). Clicking the
     // same enemy again un-pins it; clicking a fresh unit swaps the card in.
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
     void ToggleInspect(ABaseCharacter* Unit);
 
     // Drops every pinned zone + clears the inspected unit (move-click / turn-start).

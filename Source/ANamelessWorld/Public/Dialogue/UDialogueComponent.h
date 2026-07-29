@@ -4,6 +4,8 @@
 #include "Components/ActorComponent.h"
 #include "UDialogueComponent.generated.h"
 
+class UTexture2D;
+
 USTRUCT(BlueprintType)
 struct FDialogueLine
 {
@@ -16,10 +18,16 @@ struct FDialogueLine
     // The sentence currently shown to the player.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Dialogue")
     FText LineText;
+
+    // Optional portrait for whoever is speaking. Left empty for speakers with no
+    // face — a voice, a narrator, a book. Set per line rather than looked up by
+    // name, so renaming a speaker can never silently drop their portrait.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ANW|Dialogue")
+    UTexture2D* SpeakerPortrait = nullptr;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FOnDialogueLine, FText, SpeakerName, FText, LineText);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FOnDialogueLine, FText, SpeakerName, FText, LineText, UTexture2D*, SpeakerPortrait);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDialogueFinished);
 

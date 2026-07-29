@@ -12,7 +12,10 @@ void UDialogueComponent::StartDialogue(const TArray<FDialogueLine>& Lines)
 
     CurrentLines = Lines;
     CurrentIndex = 0;
-    OnLineShown.Broadcast(CurrentLines[0].SpeakerName, CurrentLines[0].LineText);
+    OnLineShown.Broadcast(
+        CurrentLines[0].SpeakerName,
+        CurrentLines[0].LineText,
+        CurrentLines[0].SpeakerPortrait);
 }
 
 void UDialogueComponent::AdvanceLine()
@@ -25,7 +28,8 @@ void UDialogueComponent::AdvanceLine()
     {
         OnLineShown.Broadcast(
             CurrentLines[CurrentIndex].SpeakerName,
-            CurrentLines[CurrentIndex].LineText);
+            CurrentLines[CurrentIndex].LineText,
+            CurrentLines[CurrentIndex].SpeakerPortrait);
     }
     else
     {

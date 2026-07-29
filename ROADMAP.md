@@ -56,6 +56,23 @@ L landed a full week early, so the back half of the calendar is rewritten:
        `WBP_DialogueBox`; the deferred ~5px arrow/card height alignment; lose-screen button reposition.
      - **Status icons over units: CUT** — the yellow threat-line already reads as "confused", and a
        narrated demo says it out loud. Redundant.
+  2b. **UI ornament pass — PULLED IN 2026-07-27** (was "stretch goal / Phase 2"). User's call: the game
+     is presented to a class and the UI is on screen for every second of the demo. **Timeboxed to 2
+     sessions with a fixed scope** — ornament on **three** things only: unit cards, command-menu buttons,
+     turn-indicator backing. NOT every widget (dialogue box, cutscene and result screens already have
+     their own look). **Ship the flat version if it stalls** — the flat theme already reads as finished;
+     ornament is upside, not rescue.
+     - Assets: **Kenney UI Pack RPG Expansion** (CC0, no attribution) — fantasy-styled panels that sit
+       with a candlelit library. Applied via **9-slice** (Brush → Draw As "Box" + margins): one small
+       frame texture stretches to any size without smearing corners.
+     - **Ability icons on the command menu rank ABOVE borders** for return-per-minute — they make the
+       menu readable at a glance in a video nobody can pause. `game-icons.net` (CC BY → needs a credits line).
+     - Ordering rule that makes this safe: colour/type/hierarchy FIRST, ornament LAST. Ornament is
+       applied on top of a settled layout; doing it first means redoing it when hierarchy changes.
+     - Habits that prevent rework: set colour as brush **tint** never baked into the image; leave 10–20px
+       padding slack (ornate borders eat edge); don't over-tune Rounded Box (it's a placeholder for frame art).
+     - **Trade-off accepted:** this competes with the Aug 1–15 deliverables. If the calendar tightens,
+       the **VFX count** in the juice pass is the trim lever, not the video or slides.
   3. **SFX/VFX juice pass** — *sourced* audio + Niagara wired into hooks that already fire
      (`OnDetonated`, `OnTelegraph`, `PlayHitReact`, `TriggerShake`). A silent demo reads as unfinished
      faster than anything else, and this is wiring, not authoring.

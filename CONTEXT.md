@@ -1,5 +1,153 @@
 # ANamelessWorld — Session Context
 
+## 🎨 UI THEME PALETTE — locked 2026-07-27 (single source of truth)
+All values UE **linear RGBA**. Font = **Cinzel** (Regular/Bold/Black already imported in `Content/Fonts/`).
+**Rule that governs the whole pass — CHROME vs SIGNAL.** Chrome (panels, borders, fonts, labels, button
+fills) gets restyled freely. **Signal** (cyan=move, red=threat, ally-blue/enemy-red, HP/MP fill) carries
+*information* — it may be harmonized, never recoloured into ambiguity. A prettier UI that makes the
+player misread whose turn it is would be a downgrade.
+**Restraint rule:** dark chrome dominates, parchment carries information, **crimson is an accent only**
+(titles, active turn, danger). Crimson everywhere = crimson means nothing.
+
+| Role | RGBA | Used on |
+|---|---|---|
+| Crimson (accent) | `0.60, 0.18, 0.16, 1.0` | Titles, danger, emphasis (Block L locked) |
+| Deep crimson | `0.38, 0.11, 0.10, 1.0` | Pressed / hover states |
+| Parchment | `0.86, 0.82, 0.72, 1.0` | Primary text |
+| Dim parchment | `0.58, 0.54, 0.46, 1.0` | Labels, secondary text (Lv, EXP) |
+| Panel fill | `0.035, 0.030, 0.028, 0.82` | Card + menu backgrounds |
+| Panel raised | `0.09, 0.07, 0.06, 0.90` | Hovered buttons |
+| Border / rule | `0.32, 0.26, 0.20, 1.0` | Frames, dividers |
+| Disabled | `0.35, 0.33, 0.29, 1.0` | Spent abilities, greyed buttons |
+| HP fill *(signal, muted)* | `0.35, 0.50, 0.22, 1.0` | Muted moss — reads as health without shouting |
+| MP fill *(signal, muted)* | `0.28, 0.32, 0.55, 1.0` | Muted indigo |
+| Ally / enemy, move cyan, threat red | **unchanged** | §9 colour law — do not touch |
+
+Ashen crimson `0.45, 0.14, 0.13, 1.0` stays reserved for the lose screen only.
+
+### Palette amendments learned in the field (2026-07-27)
+- **Allegiance is now ONE pair of values used everywhere** (strips, card HP bars, floating health bars,
+  turn-indicator text): **ally `0.02, 0.02, 1.0, 1.0` / enemy `1.0, 0.02, 0.02, 1.0`**. One blue and one
+  red meaning one thing — two near-identical blues is the kind of drift that reads as unfinished.
+- **MP/mana = amber `0.85, 0.55, 0.15, 1.0`** (darkened slightly in practice). Chosen over green because
+  **green→health is too strong a convention to spend on mana**, and amber echoes the room's candlelight.
+  Bonus: HP is always blue-or-red and MP always warm, so the two bars separate by *temperature* — legible
+  at a glance and for colour-blind players.
+- **Perceived colour depends on AREA.** Identical values read differently at different sizes: thin strokes
+  and 6px strips get anti-aliased against the background and look washed (this is why crimson text looked
+  pink, and why the strip went to 10–12px); large solid bars read *more* saturated than intended. Tune per
+  element rather than assuming one value works everywhere.
+- **Blue is the darkest primary** (~1/3 the perceived brightness of red at equal saturation). Blue-on-dark
+  or blue text on a pale floor needs its luminance lifted (e.g. `0.25, 0.45, 1.0`), not just more width.
+- **HUD text over a bright 3D scene needs an outline, not just a colour** — Outline Size `2` @
+  `0, 0, 0, 0.85` + Shadow `2,2` @ `0, 0, 0, 0.6`. The dark edge also makes the fill read as more saturated.
+- **Empty placeholders must recede** — the portrait slot was the brightest thing on the card until it was
+  set to `0.08, 0.07, 0.07, 1.0`. An empty slot should never outrank real information.
+- **Crimson appears exactly once in the HUD: the button Pressed state** (`0.38, 0.11, 0.10`). Committing
+  an action briefly flashes the colour of the ending screens. That's the restraint rule earning its keep.
+
+### UMG gotchas hit this session
+- **A binding always beats the Details value** — the greyed-out swatch means "computed, not authored".
+  Edit the binding function, not the field. An **unconnected Return Value** on a Slate Color binding falls
+  through to the parent's **Foreground Color**, which is engine-default **magenta** on `UUserWidget` — that
+  was the mystery magenta, not a project setting (nothing in Config).
+- **Place nodes by dragging off the pin you want to feed**, never from the palette — dragging off an Image
+  reference filters to the Image overload of `Set Color and Opacity`, making type mismatches impossible.
+- **Select node pins stay wildcards** (and offer no value fields) until the output is connected to
+  something typed. Connect the Return Value first, *then* set the colours.
+- **Untick sRGB in the colour picker** before typing palette numbers — they are linear values.
+- **A ProgressBar has two colour slots that MULTIPLY**: `Color and Opacity` (whole widget) and `Fill Color
+  and Opacity` (fill only). Blue fill × red tint = the muddy navy-maroon bug. Keep the widget tint white.
+- **Tick `Is Variable`** on any widget the graph must reach — the step most often forgotten.
+
+### Portrait pipeline — DONE (2026-07-27). Rendered from the models, not sourced/generated.
+Decision: **render portraits from the in-game skeletal meshes** rather than sourcing or generating them.
+Reasons: the player sees portrait and model *simultaneously*, so likeness must match; generated/painterly
+art would clash with flat polyart (same style-match logic that chose KayKit over a realistic pack); and a
+capture pipeline is a thing that presents well to a coding class. Three portraits cover the whole cast —
+all three mobs share `DA_EnemyCharacter`.
+- **Data path:** `UTexture2D* Portrait` on `UCRPGCharacterData` + **`ABaseCharacter::GetPortrait()`**
+  (BlueprintCallable, returns nullptr if no Data Asset / no portrait). Widgets talk only to the character,
+  never to the Data Asset — same as `GetHealth`/`GetUnitName`. One null-safe place to change later.
+- **`L_PortraitStudio`** (`Content/UI/Portraits/`) — empty level: backdrop plane (`M_PortraitBackdrop`,
+  **Unlit**, emissive ≈`0.08,0.07,0.065`, **Two Sided**), skeletal mesh at origin, warm key + cool rim
+  point lights, unbound PostProcessVolume with **Manual** metering, `SceneCapture2D` → `RT_Portrait` (512²).
+- **THE THREE SETTINGS THAT MUST NOT DRIFT** (they are what makes the portraits a matched *set*):
+  1. **Capture Source = `Final Color (LDR) in RGB`.** The default (`SceneColor HDR … Inv Opacity in A`)
+     writes **inverse opacity into alpha**, so an opaque scene captures alpha 0 → the static texture is a
+     fully transparent checkerboard. Final Color also runs the post-process chain, so the exposure lock
+     actually applies (it was silently doing nothing before this was changed).
+  2. **Manual exposure + a fixed Exposure Compensation.** With auto-exposure, a dark hooded character
+     gets brightened and a bright armoured one dimmed → five portraits at five brightnesses. Raise
+     *exposure*, never the individual lights, so the key/fill/rim ratio survives.
+  3. **Texture settings on every capture:** Compression **`UserInterface2D (RGBA)`**, Mip Gen
+     **`NoMipmaps`**, **sRGB on**. Default compression is built for 3D surfaces and smears a face at UI size.
+- **Craft notes:** FOV **30**, not the default 90 — a long lens reads as a portrait; wide FOV up close
+  bulges the face. **Don't light a hood from above** — the brim blocks it; key must come in at eye level
+  or below. **Never flatten the shadow side**: the lit/shadow gradient is the only thing making a
+  low-poly face read as 3D. Set `Animation Mode = Use Animation Asset`, uncheck **Playing**, and scrub
+  **Initial Position** to freeze a chosen frame (avoids T-pose, and is reproducible).
+- **Framing rule:** match the *crop*, not the camera distance — the cast has wildly different proportions
+  (TinyHero is chibi). Preserving relative scale is honest information; forcing equal head-fractions
+  makes the chibi grotesque. **Judge the set as Content Browser thumbnails**, not at 512px.
+- **Facing convention:** ally portraits face **right**, enemy portraits face **left**, ~20–30° off-axis —
+  so the two unit cards read as confronting each other across the forecast arrow.
+
+### UI theme pass — progress (2026-07-27)
+DONE: turn indicator (Cinzel Black + outline, allegiance-coloured via its binding), unit cards (dark panel
++ allegiance edge strip + allegiance HP bar + amber MP + portrait), dialogue box (portrait + crimson
+speaker name + parchment line), turn indicator/strip **merged into one Border cluster** with `M_Divider`
+between, turn slots (portrait + `GetUnitName` + permanent allegiance frame + active slot grows 64→80 +
+click-to-focus). **REMAINING: command-menu buttons**, then the ornament pass.
+- **Dialogue portraits needed a pipeline change:** `FDialogueLine` gained `UTexture2D* SpeakerPortrait`,
+  `FOnDialogueLine` went Two→**ThreeParams**, `ShowLine` gained a third arg, `UDialogueWidget` gained
+  `SpeakerPortraitImage` (**`BindWidgetOptional`**, so the WBP compiles before the Image exists). Chosen
+  over a speaker-name→portrait lookup because **name-matching breaks silently** — the same objection that
+  rejected name-convention row lookup in I2. Empty portrait ⇒ image **Collapsed**, text gets full width.
+- **New C++:** `ATacticalPlayerController::FocusOnUnit(ABaseCharacter*)` (BlueprintCallable) — the general
+  form of `FocusOnPlayerForResult`; `ToggleInspect` got a `UFUNCTION`. Kept as two functions so the slot
+  button calls both and either can be dropped if it feels wrong in play.
+- **Turn-slot design (locked):** allegiance colour on **every** slot, always — so the whole turn order's
+  composition is readable at a glance — and **size**, not colour, marks whose turn it is. Two signals on
+  two channels; colour was previously doing both jobs. Size is also pre-attentive: you see "bigger"
+  before you read a colour.
+
+### ⚠ UMG lessons from this pass (each cost real time)
+- **Alignment beats size overrides.** `Fill` means "ignore your desired size, take what's available", so it
+  silently discards Width/Height Override. It was *wrong* on the Size Box's own slot (squashed the 120→172)
+  and *right* on the Image inside it (needed to expand). If a widget won't respect a size, check alignment first.
+- **Single-child vs multi-child panels.** Button, Border, Size Box, Scale Box take **exactly one** child;
+  Vertical/Horizontal Box, Overlay, Grid, Wrap Box take many. **`Wrap With…`** inserts a container above an
+  already-nested widget; **`Replace With Child`** removes a container and keeps its child (user's find —
+  better than neutralising a Border with alpha 0).
+- **A Canvas Panel root reports NO desired size**, so an embedded widget gets squashed to nothing. Widgets
+  placed inside another layout need a self-sizing root (Button/Border/Size Box/Overlay). Canvas roots are
+  for things added straight to the viewport.
+- **`Set Content Color and Opacity` tints a Border's CHILDREN; `Set Brush Color` tints the Border itself.**
+  The old highlight used Content Color, which was fine for text but would have tinted the new portrait yellow.
+- **A Border only shows where its child isn't** — it needs **Padding** for the frame colour to be visible.
+- **Colour on a widget that already shows an image is a MULTIPLIER** — the dark placeholder tint
+  (`0.08…`) was multiplying the portrait to a twelfth brightness. White = "leave it alone".
+- **Wrong-overload trap:** `Set Color and Opacity` exists on UserWidget/Image/Text/Border. Placing it from
+  the palette defaults to the **UserWidget** version with `self` pre-filled — compiles, does nothing useful.
+  **Always place nodes by dragging off the pin you want to feed.** Same for `Target = self` on cast results.
+- **Refresh Node** fixes call sites left holding an old signature after a function/event input changes.
+- **Text-driven sizing distorts a row.** One long label ("The Protagonist") stretched its portrait. Let the
+  *container* define size and make content adapt: fixed slot width + **Text Overflow Policy = Ellipsis**.
+- **Read the variable name on the pin, not just the graph shape** — the size overrides were structurally
+  perfect and aimed at the outer (portrait+text) Size Box instead of the inner portrait one.
+
+### UI ornament pass — PULLED INTO THIS BLOCK (2026-07-27, user's call)
+Was a stretch goal; moved in because the game is **presented to a class** and the UI is on screen for the
+whole demo. **Timeboxed 2 sessions, fixed scope: unit cards + command-menu buttons + turn-indicator
+backing only.** Ship the flat version if it stalls — the flat theme already reads as finished.
+Assets: **Kenney UI Pack RPG Expansion** (CC0) via **9-slice** (Brush → Draw As "Box" + margins);
+**ability icons rank above borders** for return-per-minute (`game-icons.net`, CC BY → credits line).
+**Order rule: colour/type/hierarchy first, ornament last** — ornament goes on top of a settled layout.
+Anti-rework habits: colour as brush **tint** (never baked), leave 10–20px padding slack, don't over-tune
+Rounded Box (it's a placeholder for frame art). **Trim lever if the calendar tightens = VFX count**, not
+the video or slides.
+
 ## ▶ NEXT SESSION: UI theme pass (then SFX/VFX juice)
 **Block M is DONE** (parts 1 + 2) — the library is de-greyboxed, dressed, banner-varied and lit.
 Pick up at the **whole-game UI theme pass**: propagate the locked requiem palette from `WBP_GameResult`

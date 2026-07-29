@@ -45,6 +45,7 @@ class UGameplayAbility;   // Used for the DefaultAbilities array
 class UWidgetComponent;
 class UTurnManager;
 class UFloatingCombatText;
+class UTexture2D;
 
 
 // ── Class Declaration ─────────────────────────────────────────────────────────
@@ -155,6 +156,11 @@ public:
     // Display name for HUD/cards. Falls back to the actor name if no data asset.
     UFUNCTION(BlueprintCallable, Category = "ANW|Identity")
     FText GetUnitName() const;
+
+    // Portrait for UI. Returns nullptr if this character has no Data Asset or no
+    // portrait assigned — widgets should branch on that rather than assume a texture.
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
+    UTexture2D* GetPortrait() const;
 
     // Sets bIsAttacking on the Animation Blueprint — called when an ability fires.
     UFUNCTION(BlueprintCallable, Category = "ANW|Animation")
