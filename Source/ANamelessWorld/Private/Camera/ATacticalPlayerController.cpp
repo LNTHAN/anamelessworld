@@ -95,26 +95,6 @@ void ATacticalPlayerController::OnMoveClicked()
         return;
     }
 
-    // Targeting: the click must land on a character to stage it. Anything else
-    // is ignored — a stray click on the floor shouldn't silently cancel an
-    // armed ability.
-    if (TargetingPhase == ETargetingPhase::Targeting)
-    {
-        FHitResult Hit;
-        if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
-        {
-            if (ABaseCharacter* Unit = Cast<ABaseCharacter>(Hit.GetActor()))
-            {
-                if (Unit->IsAlive())
-                {
-                    PendingTarget = Unit;
-                    TargetingPhase = ETargetingPhase::Confirming;
-                }
-            }
-        }
-        return;
-    }
-
     // Confirming: any LMB commits. To re-pick, RMB back then click a new target.
     // Checked BEFORE Interact, or Interact's early return would swallow this click.
     if (TargetingPhase == ETargetingPhase::Confirming)
@@ -134,6 +114,26 @@ void ATacticalPlayerController::OnMoveClicked()
             {
                 PendingInteractable = Object;
                 TargetingPhase = ETargetingPhase::Confirming;
+            }
+        }
+        return;
+    }
+
+    // Targeting: the click must land on a character to stage it. Anything else
+    // is ignored — a stray click on the floor shouldn't silently cancel an
+    // armed ability.
+    if (TargetingPhase == ETargetingPhase::Targeting)
+    {
+        FHitResult Hit;
+        if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
+        {
+            if (ABaseCharacter* Unit = Cast<ABaseCharacter>(Hit.GetActor()))
+            {
+                if (Unit->IsAlive())
+                {
+                    PendingTarget = Unit;
+                    TargetingPhase = ETargetingPhase::Confirming;
+                }
             }
         }
         return;

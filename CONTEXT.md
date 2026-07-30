@@ -146,8 +146,12 @@ click-to-focus). **REMAINING: command-menu buttons**, then the ornament pass.
 - **`AInteractableActor::SetTargetAura(bool)`** → `Mesh->SetOverlayMaterial`, driven from
   `UpdateTargetAuras` (gated on `bPlayerTurn`, radius = `InteractRange` 200). Reuses **`MI_TargetAura`**
   (red) so "red = you can act on this" covers enemies *and* objects with one colour.
-  **PENDING (editor-side):** tick **Used with Static Meshes** on `M_Aura` — `SetOverlayMaterial` fails
+  Editor-side requirements: tick **Used with Static Meshes** on `M_Aura` — `SetOverlayMaterial` fails
   *silently* on a StaticMeshComponent otherwise — and assign `AuraTargetableMaterial` on `BP_RiggedBookshelf`.
+  **`InteractRange` raised 200 → 300**: distance is measured origin-to-origin, and a rigged shelf's origin
+  is its base-hinge Pivot, so on a 188-wide bookcase 200 wasn't reachable even standing at its edge. The
+  aura and `TryInteract` share this value deliberately — an aura promising reach the interact then refuses
+  would be worse than no aura at all.
 
 ### ⚠ UMG lessons from this pass (each cost real time)
 - **Alignment beats size overrides.** `Fill` means "ignore your desired size, take what's available", so it
@@ -185,7 +189,26 @@ Anti-rework habits: colour as brush **tint** (never baked), leave 10–20px padd
 Rounded Box (it's a placeholder for frame art). **Trim lever if the calendar tightens = VFX count**, not
 the video or slides.
 
-## ▶ NEXT SESSION: UI theme pass (then SFX/VFX juice)
+## ▶ NEXT SESSION: finish the UI ornament pass, then SFX/VFX juice
+**Flat UI theme pass is DONE** — turn indicator, unit cards, dialogue box, merged turn cluster, turn
+slots, command-menu buttons (incl. the armed-border material and the enable bindings), plus Interact
+confirm-and-aura parity. All committed and pushed.
+**Ornament pass is IN PROGRESS — icons first, then frames. Timebox: ~2 sessions total.**
+1. **Ability icons (started, not finished):** source 3 from `game-icons.net` (white on transparent, 256
+   PNG) → `Content/UI/Icons/`, texture settings **UserInterface2D (RGBA) / NoMipmaps / sRGB**. In
+   `WBP_CommandMenu`, wrap each button's TextBlock in a Horizontal Box, add an Image as the FIRST child
+   in a 28×28 Size Box (slot alignment Fill), tint parchment `0.86,0.82,0.72,1.0`, ~8px right padding.
+   Icons inherit the Disabled dimming for free but NOT the armed-gold label binding — bind their Color
+   and Opacity to the same function if you want them to go gold too.
+   **CC BY 3.0 → needs a credits line** (ending cutscene text or main menu).
+2. **Frames:** Kenney UI Pack RPG Expansion (CC0) via 9-slice (Brush → Draw As "Box" + margins) on the
+   unit cards, command buttons, and turn cluster ONLY. The Rounded Box brushes are placeholders for these.
+3. **Then the portrait backdrop question** — deliberately deferred until frames exist, because a frame
+   changes how the plate reads. Re-capture at Exposure Compensation 10 if you adjust it.
+**Grab a before/after PIE screenshot pair** for the presentation slides — the session-start shot was
+magenta turn text + grey buttons + blue/green cards, which makes an excellent "before".
+
+## ▶ Previous section (kept for reference): UI theme pass
 **Block M is DONE** (parts 1 + 2) — the library is de-greyboxed, dressed, banner-varied and lit.
 Pick up at the **whole-game UI theme pass**: propagate the locked requiem palette from `WBP_GameResult`
 (Cinzel, muted crimson `0.60,0.18,0.16`, faded parchment, `M_Divider`) into the battle UI, which does
