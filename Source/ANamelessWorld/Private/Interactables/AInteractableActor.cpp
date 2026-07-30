@@ -94,6 +94,12 @@ void AInteractableActor::Arm()
     }
 }
 
+void AInteractableActor::SetTargetAura(bool bTargetable)
+{
+    if (!Mesh) return;
+    Mesh->SetOverlayMaterial(bTargetable ? AuraTargetableMaterial : nullptr);
+}
+
 void AInteractableActor::CheckProximity()
 {
     if (!bArmed || bTriggered) return;

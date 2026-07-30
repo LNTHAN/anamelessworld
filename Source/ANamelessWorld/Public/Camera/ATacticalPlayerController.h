@@ -11,6 +11,7 @@
 class APlayerCharacter;
 class ABaseCharacter;
 class AEnemyCharacter;
+class AInteractableActor;
 
 // The targeting mode's three beats. Idle = normal (click moves). Targeting =
 // an ability is armed, waiting for the player to click a target. Confirming =
@@ -83,6 +84,11 @@ public:
     // which has no character to click — those go straight to Confirming.
     UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
     ABaseCharacter* PendingTarget = nullptr;
+
+    // Interact's staged object. PendingTarget is an ABaseCharacter, so an
+    // interactable needs its own slot. Exactly one of the two is ever set.
+    UPROPERTY(BlueprintReadOnly, Category = "ANW|Combat")
+    AInteractableActor* PendingInteractable = nullptr;
 
     // The unit whose detail card the inspect panel shows. Null = fall back to
     // the active ally (its card auto-shows on its turn). Set by clicking a unit.

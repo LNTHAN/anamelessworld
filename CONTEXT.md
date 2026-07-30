@@ -77,7 +77,9 @@ all three mobs share `DA_EnemyCharacter`.
      writes **inverse opacity into alpha**, so an opaque scene captures alpha 0 → the static texture is a
      fully transparent checkerboard. Final Color also runs the post-process chain, so the exposure lock
      actually applies (it was silently doing nothing before this was changed).
-  2. **Manual exposure + a fixed Exposure Compensation.** With auto-exposure, a dark hooded character
+  2. **Manual exposure + Exposure Compensation = `10`** (on the studio's PostProcessVolume — Lens →
+     Exposure). **This exact number must not change**, or a recaptured portrait won't match the set.
+     With auto-exposure, a dark hooded character
      gets brightened and a bright armoured one dimmed → five portraits at five brightnesses. Raise
      *exposure*, never the individual lights, so the key/fill/rim ratio survives.
   3. **Texture settings on every capture:** Compression **`UserInterface2D (RGBA)`**, Mip Gen
@@ -111,6 +113,41 @@ click-to-focus). **REMAINING: command-menu buttons**, then the ornament pass.
   composition is readable at a glance — and **size**, not colour, marks whose turn it is. Two signals on
   two channels; colour was previously doing both jobs. Size is also pre-attentive: you see "bigger"
   before you read a colour.
+
+### Command menu + Interact parity (2026-07-27)
+- **Buttons styled:** four state brushes (Normal `0.035,0.030,0.028,0.82` / Hovered `0.09,0.07,0.06,0.90` /
+  Pressed `0.38,0.11,0.10` / Disabled `0.02,0.02,0.02,0.55`), **Draw As = Rounded Box** (radius 4, outline
+  1px `0.32,0.26,0.20`), **Cinzel Bold 24** parchment labels. Rounded Box is a *placeholder* for the
+  ornament pass's 9-slice frames — don't over-tune it. Embolden collapsed (Chapter 2 ability, nothing to
+  target in Ch1; a dead button invites the wrong question in a narrated demo).
+- **Disabled state is real, not hypothetical** — `FireAbility` refuses once `bActionAvailable` is false, so
+  without the binding a spent action makes buttons silently inert, which reads as "broken" to an audience.
+- **`IsAbilityButtonEnabled(AbilityTag)`** — one parameterised helper, three thin per-button bindings that
+  call it with their own tag. Logic: `bActionAvailable AND (NOT Confirming OR ArmedAbilityTag == my tag)`
+  — *"enabled if I have an action left, and either we're not confirming, or the thing being confirmed is
+  me."* The armed button stays live so it reads as the active choice, not another casualty.
+- **`M_ArmedBorder`** — animated ring on the armed button during Confirming. Combines `M_RangeZone`'s
+  border-band mask with `M_ThreatLine`'s Time-driven sweep. **Per-axis `ThicknessX`/`ThicknessY`** because
+  the ring is computed in UV space (0→1 on both axes) — one shared thickness on a 200×40 button gives 15px
+  sides and 3px top/bottom. Rule: `ThicknessX = ThicknessY × (Height ÷ Width)`. Colour is **gold
+  `1.0,0.85,0.1`**, not crimson: gold is unclaimed in the palette (green reads "go", blue is the ally
+  colour, and the MP amber is close enough that a browner gold would read as mana-related).
+  Visibility bound per button — bindings can't take parameters, so this is the one place duplication is
+  correct: the differing tag literal *is* the point.
+- **UI-domain materials output to `Final Color`, not Emissive.** Preview quirks that cost time: the
+  material editor's preview **only updates on Apply** (the canvas is always live, the preview is not); a
+  transparent centre shows the *scene behind* the preview plane, so "black" ≠ "broken"; and the square
+  250² preview makes a per-axis ring look wrong — judge it on the real widget in PIE.
+- **Interact now has full parity with the status abilities** (was: one-click, instant, no staging).
+  `PendingInteractable` (its own slot — `PendingTarget` is an `ABaseCharacter`), staged on click, resolved
+  in `ConfirmPendingAction` via `TryInteract`. **The Confirming check must sit ABOVE the Interact block in
+  `OnMoveClicked`**, or Interact's early `return` swallows the confirming click and re-stages forever.
+  `ArmAbility` and `ResetTargeting` both clear *both* pending slots.
+- **`AInteractableActor::SetTargetAura(bool)`** → `Mesh->SetOverlayMaterial`, driven from
+  `UpdateTargetAuras` (gated on `bPlayerTurn`, radius = `InteractRange` 200). Reuses **`MI_TargetAura`**
+  (red) so "red = you can act on this" covers enemies *and* objects with one colour.
+  **PENDING (editor-side):** tick **Used with Static Meshes** on `M_Aura` — `SetOverlayMaterial` fails
+  *silently* on a StaticMeshComponent otherwise — and assign `AuraTargetableMaterial` on `BP_RiggedBookshelf`.
 
 ### ⚠ UMG lessons from this pass (each cost real time)
 - **Alignment beats size overrides.** `Fill` means "ignore your desired size, take what's available", so it

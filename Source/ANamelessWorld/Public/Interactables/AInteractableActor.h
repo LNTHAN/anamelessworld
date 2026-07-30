@@ -15,6 +15,7 @@
 
 // Pointers only — forward-declare here, #include in the .cpp.
 class UStaticMeshComponent;
+class UMaterialInterface;
 class USphereComponent;
 class UGameplayEffect;
 class UPrimitiveComponent;
@@ -34,6 +35,15 @@ public:
     // sharing the Interact input plumbing.
     UFUNCTION(BlueprintCallable, Category = "ANW|Interact")
     virtual void Arm();
+
+    // Overlay shown while Interact is armed and this object is within reach —
+    // the same "you can target this" teaching signal the enemy auras give.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ANW|UI")
+    UMaterialInterface* AuraTargetableMaterial;
+
+    // Applies (or clears, with false) the targetable overlay on the mesh.
+    UFUNCTION(BlueprintCallable, Category = "ANW|UI")
+    void SetTargetAura(bool bTargetable);
 
     UFUNCTION(BlueprintCallable, Category = "ANW|Interact")
     float GetDistanceToBody(const FVector& FromLocation) const;
@@ -56,6 +66,7 @@ public:
     // Implement in the Blueprint (VFX above the shelf, a creak, a wobble…).
     UFUNCTION(BlueprintImplementableEvent, Category = "ANW|Interact")
     void OnTelegraph();
+
 
 protected:
     virtual void OnConstruction(const FTransform& Transform) override;

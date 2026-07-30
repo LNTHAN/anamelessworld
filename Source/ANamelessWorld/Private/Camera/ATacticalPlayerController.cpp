@@ -11,6 +11,7 @@
 #include "Characters/AEnemyCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
+#include "EngineUtils.h"
 
 
 void ATacticalPlayerController::BeginPlay()
@@ -94,7 +95,36 @@ void ATacticalPlayerController::OnMoveClicked()
         return;
     }
 
-    // Interact: one-click arm. Trace ECC_Visibility (shelf blocks it, capsules don't).
+    // Targeting: the click must land on a character to stage it. Anything else
+    // is ignored — a stray click on the floor shouldn't silently cancel an
+    // armed ability.
+    if (TargetingPhase == ETargetingPhase::Targeting)
+    {
+        FHitResult Hit;
+        if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
+        {
+            if (ABaseCharacter* Unit = Cast<ABaseCharacter>(Hit.GetActor()))
+            {
+                if (Unit->IsAlive())
+                {
+                    PendingTarget = Unit;
+                    TargetingPhase = ETargetingPhase::Confirming;
+                }
+            }
+        }
+        return;
+    }
+
+    // Confirming: any LMB commits. To re-pick, RMB back then click a new target.
+    // Checked BEFORE Interact, or Interact's early return would swallow this click.
+    if (TargetingPhase == ETargetingPhase::Confirming)
+    {
+        ConfirmPendingAction();
+        return;
+    }
+
+    // Interact: click a rigged object to STAGE it — same two-beat flow as the
+    // status abilities. Trace ECC_Visibility (shelf blocks it, capsules don't).
     if (ArmedAbilityTag == FName("Action.Interact"))
     {
         FHitResult Hit;
@@ -102,40 +132,7 @@ void ATacticalPlayerController::OnMoveClicked()
         {
             if (AInteractableActor* Object = Cast<AInteractableActor>(Hit.GetActor()))
             {
-                if (ControlledCharacter->TryInteract(Object)) ResetTargeting();
-            }
-        }
-        return;
-    }
-
-    // Confirming: any LMB commits. To re-pick, RMB back then click a new target.
-    if (TargetingPhase == ETargetingPhase::Confirming)
-    {
-        ConfirmPendingAction();
-        return;
-    }
-
-    // Targeting: the click must land on a character to stage it.
-    if (TargetingPhase == ETargetingPhase::Targeting)
-    {
-        FHitResult Hit;
-        if (GetHitResultUnderCursor(ECC_Pawn, false, Hit))
-        {
-            if (ABaseCharacter* Target = Cast<ABaseCharacter>(Hit.GetActor()))
-            {
-                // Cast-range gate: too far → don't stage, stay in Targeting so the
-                // player can move closer or pick a nearer target. No Action spent.
-                const float Dist = FVector::Dist(
-                    ControlledCharacter->GetActorLocation(), Target->GetActorLocation());
-                if (Dist > ControlledCharacter->ConfuseCastRange)
-                {
-                    UE_LOG(LogTemp, Log,
-                        TEXT("Confuse: %s is %.0f away (> %.0f cast range) — move closer."),
-                        *Target->GetName(), Dist, ControlledCharacter->ConfuseCastRange);
-                    return;
-                }
-
-                PendingTarget = Target;
+                PendingInteractable = Object;
                 TargetingPhase = ETargetingPhase::Confirming;
             }
         }
@@ -197,6 +194,18 @@ void ATacticalPlayerController::ConfirmPendingAction()
     if (TargetingPhase != ETargetingPhase::Confirming) return;
     if (!ControlledCharacter) return;
 
+    // Interact resolves through TryInteract, not the ability system — it arms
+    // an actor rather than firing a GameplayAbility.
+    if (ArmedAbilityTag == FName("Action.Interact"))
+    {
+        if (PendingInteractable)
+        {
+            ControlledCharacter->TryInteract(PendingInteractable);
+        }
+        ResetTargeting();
+        return;
+    }
+
     const FName TagToFire = ArmedAbilityTag;
 
     if (AbilityRequiresTarget(TagToFire))
@@ -233,6 +242,7 @@ void ATacticalPlayerController::ResetTargeting()
     ArmedAbilityTag = NAME_None;
     TargetingPhase = ETargetingPhase::Idle;
     PendingTarget = nullptr;
+    PendingInteractable = nullptr;
 
     UpdateRangeIndicators();
 }
@@ -460,7 +470,6 @@ void ATacticalPlayerController::UpdateTargetAuras()
     const bool bPlayerTurn = ControlledCharacter->TurnManager
         && ControlledCharacter->TurnManager->GetCurrentState() == ETurnState::PlayerTurn;
 
-    // Auras only for enemy-targeting status abilities (not Interact).
     const bool bStatusAbility =
         ArmedAbilityTag == FName("Ability.Debuff.Confuse") ||
         ArmedAbilityTag == FName("Ability.Debuff.Intimidate");
@@ -490,6 +499,19 @@ void ATacticalPlayerController::UpdateTargetAuras()
             State = bImmune ? ETargetAura::Immune : ETargetAura::Targetable;
         }
         E->SetTargetAura(State);
+    }
+
+    // Interact aura: light the reachable rigged objects instead of enemies.
+    const bool bInteractArmed = bPlayerTurn
+        && ArmedAbilityTag == FName("Action.Interact");    
+    for (TActorIterator<AInteractableActor> It(GetWorld()); It; ++It)
+    {
+        AInteractableActor* Object = *It;
+        if (!Object) continue;
+
+        const float Dist = FVector::Dist(
+            ControlledCharacter->GetActorLocation(), Object->GetActorLocation());
+        Object->SetTargetAura(bInteractArmed && Dist <= ControlledCharacter->InteractRange);
     }
 }
 
